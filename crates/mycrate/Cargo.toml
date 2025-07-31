@@ -1,0 +1,28 @@
+[package]
+authors.workspace      = true
+description            = "TODO(template) description"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["miden"]                    # TODO(template) add keywords
+license.workspace      = true
+name                   = "miden-mycrate"              # TODO(template) use `miden-` prefix in the name
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lints]
+workspace = true
+
+# TODO(template) update for the project
+[dependencies]
+anyhow                = { workspace = true }
+opentelemetry         = { version = "0.30" }
+opentelemetry-otlp    = { default-features = false, features = ["grpc-tonic", "tls-roots", "trace"], version = "0.30" }
+opentelemetry_sdk     = { features = ["rt-tokio", "testing"], version = "0.30" }
+thiserror             = { workspace = true }
+tokio                 = { workspace = true }
+tonic                 = { workspace = true }
+tracing               = { workspace = true }
+tracing-opentelemetry = { version = "0.31" }
+tracing-subscriber    = { workspace = true }
