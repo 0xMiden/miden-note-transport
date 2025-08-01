@@ -1,0 +1,19 @@
+[package]
+name = "miden-transport-proto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Protobuf
+prost = "0.12"
+prost-types = "0.12"
+tonic = "0.11"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Miden objects for conversions
+miden-objects = { version = "0.10", features = ["testing"] }
+
+[build-dependencies]
+tonic-build = "0.11" 

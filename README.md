@@ -1,4 +1,4 @@
-# Miden Rust project template (TODO(template) update for the project)
+# Miden Transport Layer for Private Notes
 
 <!--`TODO(template) update badges`-->
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/0xMiden/project-template/blob/main/LICENSE)
@@ -6,22 +6,22 @@
 [![RUST_VERSION](https://img.shields.io/badge/rustc-1.85+-lightgray.svg)](https://www.rust-lang.org/tools/install)
 [![crates.io](https://img.shields.io/crates/v/miden-mybinary)](https://crates.io/crates/miden-mybinary)
 
-Welcome to the Miden Rust template.
+## Overview
 
-It contains a typical setup for a binary as well as library crates. Feel free to remove unnecessary parts.
+### Crates
 
-To use:
-1. Rely on Github "Use this template" green button or 
+- `proto`: Protobuf definitions and generated code;
+- `transport`: Node/server and client implementations.
 
-```sh
-cargo install cargo-generate
-cargo generate --git https://github.com/0xMiden/project-template
-```
-2. Please search over the codebase `TODO(template)` to make appropriate changes
+## Quick Start
 
-## Documentation
+## API Reference
 
-TODO(template) - provide links to the documentation
+## Usage
+
+### Sending a Note
+
+### Receiving Notes
 
 ## Contributing
 
@@ -36,5 +36,4 @@ Note that we do _not_ accept low-effort contributions or AI generated code. For 
 rather open an issue.
 
 ## License
-
 This project is [MIT licensed](./LICENSE).
