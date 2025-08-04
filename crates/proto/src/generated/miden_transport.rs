@@ -56,17 +56,17 @@ pub struct NoteInfo {
 /// API request for marking a note as received
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MarkReceivedRequest {
-    /// NoteId as hex string
-    #[prost(string, tag = "1")]
-    pub id: ::prost::alloc::string::String,
+    /// NoteIds as hex string
+    #[prost(string, repeated, tag = "1")]
+    pub note_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     #[prost(message, optional, tag = "2")]
     pub user_id: ::core::option::Option<UserId>,
 }
 /// API response for marking a note as received
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MarkReceivedResponse {
-    #[prost(enumeration = "NoteStatus", tag = "1")]
-    pub status: i32,
+    #[prost(enumeration = "NoteStatus", repeated, tag = "1")]
+    pub status: ::prost::alloc::vec::Vec<i32>,
 }
 /// Server health check response
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

@@ -55,13 +55,13 @@ message NoteInfo {
 
 // API request for marking a note as received
 message MarkReceivedRequest {
-    string id = 1;  // NoteId as hex string
+    repeated string note_ids = 1;  // NoteIds as hex string
     UserId user_id = 2;
 }
 
 // API response for marking a note as received
 message MarkReceivedResponse {
-    NoteStatus status = 1;
+    repeated NoteStatus status = 1;
 }
 
 // Server health check response

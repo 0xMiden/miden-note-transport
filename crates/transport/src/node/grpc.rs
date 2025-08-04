@@ -1,16 +1,18 @@
+use crate::{
+    database::Database,
+    types::{EncryptedDetails, NoteId},
+    Result,
+};
 use chrono::Utc;
 use miden_objects::utils::{Deserializable, Serializable};
-use std::{net::SocketAddr, sync::Arc};
-use tonic::{Request, Response, Status};
-
-use crate::{database::Database, types::EncryptedDetails, Result};
-
 use miden_transport_proto::miden_transport::miden_transport_server::MidenTransportServer;
 use miden_transport_proto::miden_transport::{
     EncryptedDetails as ProtoEncryptedDetails, FetchNotesRequest, FetchNotesResponse,
     HealthResponse, MarkReceivedRequest, MarkReceivedResponse, NoteInfo as ProtoNoteInfo,
     NoteStatus as ProtoNoteStatus, SendNoteRequest, SendNoteResponse, StatsResponse,
 };
+use std::{net::SocketAddr, sync::Arc};
+use tonic::{Request, Response, Status};
 
 pub struct GrpcServer {
     database: Arc<Database>,
@@ -148,19 +150,15 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
         let request = request.into_inner();
 
         // Parse note ID from hex string
-        let note_id = miden_objects::note::NoteId::try_from_hex(&request.id)
-            .map_err(|e| Status::invalid_argument(format!("Invalid note ID: {e:?}")))?;
-
-        // Check if note exists
-        let exists = self
-            .database
-            .note_exists(note_id)
-            .await
-            .map_err(|e| Status::internal(format!("Database error: {e:?}")))?;
-
-        if !exists {
-            return Err(Status::not_found("Note not found"));
-        }
+        let note_ids: Vec<NoteId> = request
+            .note_ids
+            .iter()
+            .map(|hex| {
+                NoteId::try_from_hex(hex)
+                    .map_err(|e| Status::invalid_argument(format!("Invalid note ID: {e:?}")))
+            })
+            .collect::<std::result::Result<Vec<_>, Status>>()?;
+        let len = note_ids.len();
 
         let user_id = request
             .user_id
@@ -168,12 +166,13 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
 
         // Mark note as received
         self.database
-            .mark_received(note_id, user_id.into())
+            .mark_received(note_ids, user_id.into())
             .await
             .map_err(|e| Status::internal(format!("Failed to mark note received: {e:?}")))?;
 
+        // TODO more detailed response
         Ok(Response::new(MarkReceivedResponse {
-            status: ProtoNoteStatus::Marked as i32,
+            status: vec![ProtoNoteStatus::Marked as i32; len],
         }))
     }
 

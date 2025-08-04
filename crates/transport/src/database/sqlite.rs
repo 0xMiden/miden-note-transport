@@ -143,40 +143,48 @@ impl DatabaseBackend for SQLiteDB {
         Ok(notes)
     }
 
-    async fn mark_received(&self, note_id: NoteId, user_id: UserId) -> Result<()> {
-        // First, get the current received_by list
-        let row = sqlx::query(
-            r#"
-            SELECT received_by FROM notes WHERE id = ?
-            "#,
-        )
-        .bind(&note_id.inner().as_bytes()[..])
-        .fetch_one(&self.pool)
-        .await?;
+    async fn mark_received(&self, note_ids: Vec<NoteId>, user_id: UserId) -> Result<()> {
+        // Use a transaction to ensure atomicity when updating multiple notes
+        let mut tx = self.pool.begin().await?;
 
-        let received_by_json: String = row.try_get("received_by")?;
-        let mut received_by: Vec<String> = if received_by_json == "[]" {
-            Vec::new()
-        } else {
-            serde_json::from_str(&received_by_json)?
-        };
+        for note_id in note_ids {
+            // First, get the current received_by list
+            let row = sqlx::query(
+                r#"
+                SELECT received_by FROM notes WHERE id = ?
+                "#,
+            )
+            .bind(&note_id.inner().as_bytes()[..])
+            .fetch_one(&mut *tx)
+            .await?;
 
-        // Add the user if not already present
-        if !received_by.contains(&user_id.0) {
-            received_by.push(user_id.0);
+            let received_by_json: String = row.try_get("received_by")?;
+            let mut received_by: Vec<String> = if received_by_json == "[]" {
+                Vec::new()
+            } else {
+                serde_json::from_str(&received_by_json)?
+            };
+
+            // Add the user if not already present
+            if !received_by.contains(&user_id.0) {
+                received_by.push(user_id.0.clone());
+            }
+
+            let updated_json = serde_json::to_string(&received_by)?;
+
+            sqlx::query(
+                r#"
+                UPDATE notes SET received_by = ? WHERE id = ?
+                "#,
+            )
+            .bind(updated_json)
+            .bind(&note_id.inner().as_bytes()[..])
+            .execute(&mut *tx)
+            .await?;
         }
 
-        let updated_json = serde_json::to_string(&received_by)?;
-
-        sqlx::query(
-            r#"
-            UPDATE notes SET received_by = ? WHERE id = ?
-            "#,
-        )
-        .bind(updated_json)
-        .bind(&note_id.inner().as_bytes()[..])
-        .execute(&self.pool)
-        .await?;
+        // Commit the transaction
+        tx.commit().await?;
 
         Ok(())
     }

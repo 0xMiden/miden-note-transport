@@ -55,8 +55,8 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let tag = header.metadata().tag();
     assert_eq!(tag, sent_tag);
 
-    // Mark received
-    client.mark_received(note_id).await?;
+    // Mark note as received
+    client.mark_received(&[note_id]).await?;
     let notes = client.fetch_notes(sent_tag, &key).await?;
     assert_eq!(notes.len(), 0);
 

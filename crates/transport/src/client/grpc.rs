@@ -115,9 +115,10 @@ impl GrpcClient {
         Ok(notes)
     }
 
-    pub async fn mark_received(&mut self, note_id: NoteId) -> Result<()> {
+    pub async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
+        let hexs = note_ids.iter().map(|id| id.to_hex()).collect::<Vec<_>>();
         let request = MarkReceivedRequest {
-            id: note_id.to_hex(),
+            note_ids: hexs,
             user_id: self.user_id.as_ref().map(|id| id.clone().into()),
         };
 
@@ -208,7 +209,7 @@ impl super::TransportClient for GrpcClient {
         self.fetch_notes(tag).await
     }
 
-    async fn mark_received(&mut self, note_id: NoteId) -> Result<()> {
-        self.mark_received(note_id).await
+    async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
+        self.mark_received(note_ids).await
     }
 }

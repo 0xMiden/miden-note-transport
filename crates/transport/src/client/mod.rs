@@ -21,7 +21,7 @@ pub trait TransportClient: Send + Sync {
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>>;
 
     /// Mark a note as received to prevent re-downloading
-    async fn mark_received(&mut self, note_id: NoteId) -> Result<()>;
+    async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()>;
 }
 
 /// Encryption store trait for managing encryption keys
@@ -138,7 +138,7 @@ impl Client {
     }
 
     /// Mark a note as received
-    pub async fn mark_received(&mut self, note_id: NoteId) -> Result<()> {
-        self.transport_client.mark_received(note_id).await
+    pub async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
+        self.transport_client.mark_received(note_ids).await
     }
 }
