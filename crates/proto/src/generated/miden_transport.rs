@@ -34,6 +34,8 @@ pub struct FetchNotesRequest {
     /// NoteTag as hex string
     #[prost(string, tag = "1")]
     pub tag: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "2")]
+    pub user_id: ::core::option::Option<UserId>,
 }
 /// API response for fetching notes
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -57,8 +59,8 @@ pub struct MarkReceivedRequest {
     /// NoteId as hex string
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
-    #[prost(string, tag = "2")]
-    pub user_id: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "2")]
+    pub user_id: ::core::option::Option<UserId>,
 }
 /// API response for marking a note as received
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]

@@ -1,6 +1,6 @@
 use super::{DatabaseBackend, DatabaseConfig};
 use crate::{
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteTag, StoredNote},
+    types::{EncryptedDetails, NoteHeader, NoteId, NoteTag, StoredNote, UserId},
     Error, Result,
 };
 use chrono::{DateTime, Utc};
@@ -70,16 +70,32 @@ impl DatabaseBackend for SQLiteDB {
         Ok(())
     }
 
-    async fn fetch_notes(&self, tag: NoteTag) -> Result<Vec<StoredNote>> {
-        let query = sqlx::query(
-            r#"
+    async fn fetch_notes(&self, tag: NoteTag, user_id: Option<UserId>) -> Result<Vec<StoredNote>> {
+        let query = if let Some(user_id) = user_id {
+            // Filter out notes that have been received by the specified user_id
+            sqlx::query(
+                r#"
+                SELECT id, tag, header, encrypted_data, created_at, received_by
+                FROM notes
+                WHERE tag = ?
+                AND (received_by = '[]' OR received_by NOT LIKE ?)
+                ORDER BY created_at ASC
+                "#,
+            )
+            .bind(tag.as_u32() as i64)
+            .bind(format!("%\"{}\"%", user_id.0))
+        } else {
+            // No user filtering
+            sqlx::query(
+                r#"
                 SELECT id, tag, header, encrypted_data, created_at, received_by
                 FROM notes
                 WHERE tag = ?
                 ORDER BY created_at ASC
                 "#,
-        )
-        .bind(tag.as_u32() as i64);
+            )
+            .bind(tag.as_u32() as i64)
+        };
 
         let rows = query.fetch_all(&self.pool).await?;
         let mut notes = Vec::new();
@@ -127,7 +143,7 @@ impl DatabaseBackend for SQLiteDB {
         Ok(notes)
     }
 
-    async fn mark_received(&self, note_id: NoteId, user_id: &str) -> Result<()> {
+    async fn mark_received(&self, note_id: NoteId, user_id: UserId) -> Result<()> {
         // First, get the current received_by list
         let row = sqlx::query(
             r#"
@@ -146,8 +162,8 @@ impl DatabaseBackend for SQLiteDB {
         };
 
         // Add the user if not already present
-        if !received_by.contains(&user_id.to_string()) {
-            received_by.push(user_id.to_string());
+        if !received_by.contains(&user_id.0) {
+            received_by.push(user_id.0);
         }
 
         let updated_json = serde_json::to_string(&received_by)?;

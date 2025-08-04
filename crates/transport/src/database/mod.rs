@@ -2,7 +2,7 @@ mod sqlite;
 
 use self::sqlite::SQLiteDB;
 use crate::{
-    types::{NoteId, NoteTag, StoredNote},
+    types::{NoteId, NoteTag, StoredNote, UserId},
     Result,
 };
 
@@ -18,10 +18,10 @@ pub trait DatabaseBackend: Send + Sync {
     async fn store_note(&self, note: &StoredNote) -> Result<()>;
 
     /// Fetch notes by tag
-    async fn fetch_notes(&self, tag: NoteTag) -> Result<Vec<StoredNote>>;
+    async fn fetch_notes(&self, tag: NoteTag, user_id: Option<UserId>) -> Result<Vec<StoredNote>>;
 
     /// Mark a note as received by a user
-    async fn mark_received(&self, note_id: NoteId, user_id: &str) -> Result<()>;
+    async fn mark_received(&self, note_id: NoteId, user_id: UserId) -> Result<()>;
 
     /// Get statistics about the database
     async fn get_stats(&self) -> Result<(u64, u64)>;
@@ -74,15 +74,19 @@ impl Database {
     }
 
     /// Fetch notes by tag, optionally filtered by block number
-    pub async fn fetch_notes(&self, tag: NoteTag) -> Result<Vec<StoredNote>> {
-        self.backend.fetch_notes(tag).await
+    pub async fn fetch_notes(
+        &self,
+        tag: NoteTag,
+        user_id: Option<UserId>,
+    ) -> Result<Vec<StoredNote>> {
+        self.backend.fetch_notes(tag, user_id).await
     }
 
     /// Mark a note as received by a user
     pub async fn mark_received(
         &self,
         note_id: miden_objects::note::NoteId,
-        user_id: &str,
+        user_id: UserId,
     ) -> Result<()> {
         self.backend.mark_received(note_id, user_id).await
     }
@@ -112,6 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_sqlite_database() {
         let db = Database::connect(DatabaseConfig::default()).await.unwrap();
+        let user1 = UserId::random();
 
         let note = StoredNote {
             header: test_note_header(),
@@ -122,7 +127,7 @@ mod tests {
 
         db.store_note(&note).await.unwrap();
 
-        let fetched_notes = db.fetch_notes(TEST_TAG.into()).await.unwrap();
+        let fetched_notes = db.fetch_notes(TEST_TAG.into(), user1.into()).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
@@ -138,6 +143,8 @@ mod tests {
     #[tokio::test]
     async fn test_mark_received() {
         let db = Database::connect(DatabaseConfig::default()).await.unwrap();
+        let user1 = UserId::random();
+        let user2 = UserId::random();
 
         let note = StoredNote {
             header: test_note_header(),
@@ -148,16 +155,34 @@ mod tests {
 
         db.store_note(&note).await.unwrap();
 
+        let fetched_notes = db
+            .fetch_notes(TEST_TAG.into(), user1.clone().into())
+            .await
+            .unwrap();
+        assert_eq!(fetched_notes.len(), 1);
+
         // Mark as received
-        db.mark_received(note.header.id(), "user1").await.unwrap();
-        db.mark_received(note.header.id(), "user2").await.unwrap();
+        db.mark_received(note.header.id(), user1.clone())
+            .await
+            .unwrap();
+        db.mark_received(note.header.id(), user2.clone())
+            .await
+            .unwrap();
 
         // Fetch and verify received_by
-        let fetched_notes = db.fetch_notes(TEST_TAG.into()).await.unwrap();
-        assert_eq!(fetched_notes.len(), 1);
-        let received_by = fetched_notes[0].received_by.as_ref().unwrap();
-        assert_eq!(received_by.len(), 2);
-        assert!(received_by.contains(&"user1".to_string()));
-        assert!(received_by.contains(&"user2".to_string()));
+        let fetched_notes = db
+            .fetch_notes(TEST_TAG.into(), user1.clone().into())
+            .await
+            .unwrap();
+        assert_eq!(fetched_notes.len(), 0);
+        let fetched_notes_user2 = db
+            .fetch_notes(TEST_TAG.into(), user2.clone().into())
+            .await
+            .unwrap();
+        assert_eq!(fetched_notes_user2.len(), 0);
+
+        // Fetch without user_id filter
+        let fetched_notes_all = db.fetch_notes(TEST_TAG.into(), None).await.unwrap();
+        assert_eq!(fetched_notes_all.len(), 1);
     }
 }

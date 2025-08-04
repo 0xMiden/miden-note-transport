@@ -7,7 +7,7 @@ use tonic::{
 use tower::timeout::Timeout;
 
 use crate::{
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag},
+    types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag, UserId},
     Error, Result,
 };
 
@@ -19,10 +19,15 @@ use miden_transport_proto::miden_transport::{
 
 pub struct GrpcClient {
     client: MidenTransportClient<Timeout<Channel>>,
+    user_id: Option<UserId>,
 }
 
 impl GrpcClient {
-    pub async fn connect(endpoint: String, timeout_ms: u64) -> Result<Self> {
+    pub async fn connect(
+        endpoint: String,
+        timeout_ms: u64,
+        user_id: Option<UserId>,
+    ) -> Result<Self> {
         let tls = ClientTlsConfig::new().with_native_roots();
         let channel = Channel::from_shared(endpoint.clone())
             .map_err(|e| Error::Internal(format!("Invalid endpoint URI: {e}")))?
@@ -33,7 +38,7 @@ impl GrpcClient {
         let timeout_channel = Timeout::new(channel, timeout);
         let client = MidenTransportClient::new(timeout_channel);
 
-        Ok(Self { client })
+        Ok(Self { client, user_id })
     }
 
     pub async fn send_note(
@@ -67,6 +72,7 @@ impl GrpcClient {
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>> {
         let request = FetchNotesRequest {
             tag: format!("{:08x}", tag.as_u32()),
+            user_id: self.user_id.as_ref().map(|id| id.clone().into()),
         };
 
         let response = self
@@ -109,10 +115,10 @@ impl GrpcClient {
         Ok(notes)
     }
 
-    pub async fn mark_received(&mut self, note_id: NoteId, user_id: String) -> Result<()> {
+    pub async fn mark_received(&mut self, note_id: NoteId) -> Result<()> {
         let request = MarkReceivedRequest {
             id: note_id.to_hex(),
-            user_id,
+            user_id: self.user_id.as_ref().map(|id| id.clone().into()),
         };
 
         self.client
@@ -203,7 +209,6 @@ impl super::TransportClient for GrpcClient {
     }
 
     async fn mark_received(&mut self, note_id: NoteId) -> Result<()> {
-        self.mark_received(note_id, "default_user".to_string())
-            .await
+        self.mark_received(note_id).await
     }
 }

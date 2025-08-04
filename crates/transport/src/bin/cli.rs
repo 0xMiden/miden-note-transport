@@ -19,6 +19,10 @@ struct Args {
     #[arg(long, default_value = "1000")]
     timeout: u64,
 
+    /// User ID
+    #[arg(long)]
+    user_id: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -72,7 +76,8 @@ async fn main() -> Result<()> {
     info!("Endpoint: {}", args.endpoint);
 
     // Create client
-    let grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
+    let grpc =
+        GrpcClient::connect(args.endpoint, args.timeout, args.user_id.map(|s| s.into())).await?;
     let encryption_store = FilesystemEncryptionStore::new("./keys")?;
     let mut client = Client::new(Box::new(grpc), Box::new(encryption_store));
 

@@ -29,9 +29,38 @@ impl From<Vec<u8>> for EncryptedDetails {
     }
 }
 
+impl UserId {
+    pub fn new(id: String) -> Self {
+        UserId(id)
+    }
+
+    /// Creates a random UUID v4
+    pub fn random() -> Self {
+        Self::new(uuid::Uuid::new_v4().to_string())
+    }
+}
+
 impl From<String> for UserId {
     fn from(value: String) -> Self {
         UserId(value)
+    }
+}
+
+impl From<miden_transport_proto::UserId> for UserId {
+    fn from(proto: miden_transport_proto::UserId) -> Self {
+        UserId(proto.value)
+    }
+}
+
+impl From<UserId> for miden_transport_proto::UserId {
+    fn from(id: UserId) -> Self {
+        miden_transport_proto::UserId { value: id.0 }
+    }
+}
+
+impl std::fmt::Display for UserId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

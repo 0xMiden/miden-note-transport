@@ -119,7 +119,7 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
         // Fetch notes from database
         let notes = self
             .database
-            .fetch_notes(tag)
+            .fetch_notes(tag, request.user_id.map(|id| id.into()))
             .await
             .map_err(|e| Status::internal(format!("Failed to fetch notes: {e:?}")))?;
 
@@ -162,9 +162,13 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
             return Err(Status::not_found("Note not found"));
         }
 
+        let user_id = request
+            .user_id
+            .ok_or(Status::invalid_argument("User ID is absent".to_string()))?;
+
         // Mark note as received
         self.database
-            .mark_received(note_id, &request.user_id)
+            .mark_received(note_id, user_id.into())
             .await
             .map_err(|e| Status::internal(format!("Failed to mark note received: {e:?}")))?;
 
