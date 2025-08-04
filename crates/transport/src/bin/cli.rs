@@ -15,6 +15,10 @@ struct Args {
     #[arg(long, default_value = "http://localhost:8080")]
     endpoint: String,
 
+    /// Request timeout (ms)
+    #[arg(long, default_value = "1000")]
+    timeout: u64,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -68,7 +72,7 @@ async fn main() -> Result<()> {
     info!("Endpoint: {}", args.endpoint);
 
     // Create client
-    let grpc = GrpcClient::connect(args.endpoint).await?;
+    let grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
     let encryption_store = FilesystemEncryptionStore::new("./keys")?;
     let mut client = Client::new(Box::new(grpc), Box::new(encryption_store));
 

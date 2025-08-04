@@ -12,7 +12,10 @@ pub enum Error {
     Serialization(#[from] serde_json::Error),
 
     #[error("gRPC error: {0}")]
-    Grpc(Box<tonic::Status>),
+    GrpcStatus(Box<tonic::Status>),
+
+    #[error("gRPC error: {0}")]
+    GrpcTransport(#[from] tonic::transport::Error),
 
     #[error("Encryption error: {0}")]
     Encryption(String),
@@ -50,7 +53,7 @@ pub enum Error {
 
 impl From<tonic::Status> for Error {
     fn from(status: tonic::Status) -> Self {
-        Error::Grpc(Box::new(status))
+        Error::GrpcStatus(Box::new(status))
     }
 }
 

@@ -12,6 +12,7 @@ use tokio::time::sleep;
 #[serial]
 async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let port = 9627;
+    let timeout_ms = 1000;
     let url = format!("http://127.0.0.1:{port}");
 
     let config = NodeConfig {
@@ -27,7 +28,7 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
 
     sleep(Duration::from_millis(100)).await;
 
-    let grpc_client = Box::new(GrpcClient::connect(url).await?);
+    let grpc_client = Box::new(GrpcClient::connect(url, timeout_ms).await?);
     let encryption_store = Box::new(FilesystemEncryptionStore::new("/tmp")?);
     let mut client = Client::new(grpc_client, encryption_store);
     // TODO make use of EncryptionStore
