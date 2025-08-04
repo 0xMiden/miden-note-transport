@@ -17,3 +17,9 @@ pub use miden_transport::*;
 pub use account::*;
 pub use note::*;
 pub use primitives::*;
+
+impl From<String> for UserId {
+    fn from(s: String) -> Self {
+        UserId { value: s }
+    }
+}

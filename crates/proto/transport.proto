@@ -38,6 +38,7 @@ message SendNoteResponse {
 // API request for fetching notes
 message FetchNotesRequest {
     string tag = 1;  // NoteTag as hex string
+    UserId user_id = 2;
 }
 
 // API response for fetching notes
@@ -55,7 +56,7 @@ message NoteInfo {
 // API request for marking a note as received
 message MarkReceivedRequest {
     string id = 1;  // NoteId as hex string
-    string user_id = 2;
+    UserId user_id = 2;
 }
 
 // API response for marking a note as received
