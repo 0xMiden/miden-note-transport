@@ -1,6 +1,10 @@
 use miden_objects::utils::{Deserializable, Serializable};
-use tonic::transport::Channel;
-use tonic::Request;
+use std::time::Duration;
+use tonic::{
+    transport::{Channel, ClientTlsConfig},
+    Request,
+};
+use tower::timeout::Timeout;
 
 use crate::{
     types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag},
@@ -14,14 +18,20 @@ use miden_transport_proto::miden_transport::{
 };
 
 pub struct GrpcClient {
-    client: MidenTransportClient<Channel>,
+    client: MidenTransportClient<Timeout<Channel>>,
 }
 
 impl GrpcClient {
-    pub async fn connect(addr: String) -> Result<Self> {
-        let client = MidenTransportClient::connect(addr)
-            .await
-            .map_err(|e| Error::Internal(format!("Failed to connect: {e:?}")))?;
+    pub async fn connect(endpoint: String, timeout_ms: u64) -> Result<Self> {
+        let tls = ClientTlsConfig::new().with_native_roots();
+        let channel = Channel::from_shared(endpoint.clone())
+            .map_err(|e| Error::Internal(format!("Invalid endpoint URI: {e}")))?
+            .tls_config(tls)?
+            .connect()
+            .await?;
+        let timeout = Duration::from_millis(timeout_ms);
+        let timeout_channel = Timeout::new(channel, timeout);
+        let client = MidenTransportClient::new(timeout_channel);
 
         Ok(Self { client })
     }
