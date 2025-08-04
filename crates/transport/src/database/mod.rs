@@ -21,7 +21,7 @@ pub trait DatabaseBackend: Send + Sync {
     async fn fetch_notes(&self, tag: NoteTag, user_id: Option<UserId>) -> Result<Vec<StoredNote>>;
 
     /// Mark a note as received by a user
-    async fn mark_received(&self, note_id: NoteId, user_id: UserId) -> Result<()>;
+    async fn mark_received(&self, note_id: Vec<NoteId>, user_id: UserId) -> Result<()>;
 
     /// Get statistics about the database
     async fn get_stats(&self) -> Result<(u64, u64)>;
@@ -83,11 +83,7 @@ impl Database {
     }
 
     /// Mark a note as received by a user
-    pub async fn mark_received(
-        &self,
-        note_id: miden_objects::note::NoteId,
-        user_id: UserId,
-    ) -> Result<()> {
+    pub async fn mark_received(&self, note_id: Vec<NoteId>, user_id: UserId) -> Result<()> {
         self.backend.mark_received(note_id, user_id).await
     }
 
@@ -102,7 +98,7 @@ impl Database {
     }
 
     /// Check if a note exists
-    pub async fn note_exists(&self, note_id: miden_objects::note::NoteId) -> Result<bool> {
+    pub async fn note_exists(&self, note_id: NoteId) -> Result<bool> {
         self.backend.note_exists(note_id).await
     }
 }
@@ -146,43 +142,54 @@ mod tests {
         let user1 = UserId::random();
         let user2 = UserId::random();
 
-        let note = StoredNote {
+        let note1 = StoredNote {
             header: test_note_header(),
             encrypted_data: EncryptedDetails(vec![9, 10, 11, 12]),
             created_at: Utc::now(),
             received_by: None,
         };
 
-        db.store_note(&note).await.unwrap();
+        let note2 = StoredNote {
+            header: test_note_header(),
+            encrypted_data: EncryptedDetails(vec![13, 14, 15, 16]),
+            created_at: Utc::now(),
+            received_by: None,
+        };
+
+        db.store_note(&note1).await.unwrap();
+        db.store_note(&note2).await.unwrap();
 
         let fetched_notes = db
             .fetch_notes(TEST_TAG.into(), user1.clone().into())
             .await
             .unwrap();
-        assert_eq!(fetched_notes.len(), 1);
+        assert_eq!(fetched_notes.len(), 2);
 
-        // Mark as received
-        db.mark_received(note.header.id(), user1.clone())
+        // Mark all as received for user1
+        db.mark_received(vec![note1.header.id(), note2.header.id()], user1.clone())
             .await
             .unwrap();
-        db.mark_received(note.header.id(), user2.clone())
+        // Mark only 1 as received for user2
+        db.mark_received(vec![note1.header.id()], user2.clone())
             .await
             .unwrap();
 
-        // Fetch and verify received_by
-        let fetched_notes = db
+        // Fetch and verify received_by for user1
+        let fetched_notes_user1 = db
             .fetch_notes(TEST_TAG.into(), user1.clone().into())
             .await
             .unwrap();
-        assert_eq!(fetched_notes.len(), 0);
+        assert_eq!(fetched_notes_user1.len(), 0);
+
+        // Fetch and verify received_by for user2
         let fetched_notes_user2 = db
             .fetch_notes(TEST_TAG.into(), user2.clone().into())
             .await
             .unwrap();
-        assert_eq!(fetched_notes_user2.len(), 0);
+        assert_eq!(fetched_notes_user2.len(), 1);
 
         // Fetch without user_id filter
         let fetched_notes_all = db.fetch_notes(TEST_TAG.into(), None).await.unwrap();
-        assert_eq!(fetched_notes_all.len(), 1);
+        assert_eq!(fetched_notes_all.len(), 2);
     }
 }
