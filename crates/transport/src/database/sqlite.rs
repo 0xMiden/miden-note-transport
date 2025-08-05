@@ -1,11 +1,11 @@
 use super::{DatabaseBackend, DatabaseConfig};
 use crate::{
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteTag, StoredNote, UserId},
     Error, Result,
+    types::{EncryptedDetails, NoteHeader, NoteId, NoteTag, StoredNote, UserId},
 };
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
-use sqlx::{sqlite::SqlitePool, Row};
+use sqlx::{Row, sqlite::SqlitePool};
 
 /// SQLite implementation of the database backend
 pub struct SQLiteDB {

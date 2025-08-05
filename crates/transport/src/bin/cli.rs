@@ -1,9 +1,9 @@
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use clap::{Parser, Subcommand};
 use miden_objects::{note::Note, utils::Deserializable};
 use miden_transport::{
-    client::{crypto, grpc::GrpcClient, Client, FilesystemEncryptionStore},
     Result,
+    client::{Client, FilesystemEncryptionStore, crypto, grpc::GrpcClient},
 };
 use tracing::info;
 

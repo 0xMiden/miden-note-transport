@@ -4,6 +4,6 @@ pub mod error;
 pub mod node;
 pub mod types;
 
-pub use client::{grpc::GrpcClient, Client};
+pub use client::{Client, grpc::GrpcClient};
 pub use error::{Error, Result};
-pub use node::{grpc::GrpcServer, Node, NodeConfig};
+pub use node::{Node, NodeConfig, grpc::GrpcServer};

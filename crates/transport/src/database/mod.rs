@@ -2,8 +2,8 @@ mod sqlite;
 
 use self::sqlite::SQLiteDB;
 use crate::{
-    types::{NoteId, NoteTag, StoredNote, UserId},
     Result,
+    types::{NoteId, NoteTag, StoredNote, UserId},
 };
 
 /// Database operations
@@ -106,7 +106,7 @@ impl Database {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{test_note_header, EncryptedDetails, TEST_TAG};
+    use crate::types::{EncryptedDetails, TEST_TAG, test_note_header};
     use chrono::Utc;
 
     #[tokio::test]

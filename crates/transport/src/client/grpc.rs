@@ -1,14 +1,14 @@
 use miden_objects::utils::{Deserializable, Serializable};
 use std::time::Duration;
 use tonic::{
-    transport::{Channel, ClientTlsConfig},
     Request,
+    transport::{Channel, ClientTlsConfig},
 };
 use tower::timeout::Timeout;
 
 use crate::{
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag, UserId},
     Error, Result,
+    types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag, UserId},
 };
 
 use miden_transport_proto::miden_transport::miden_transport_client::MidenTransportClient;

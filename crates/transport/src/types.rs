@@ -176,19 +176,19 @@ pub fn random_note_id() -> NoteId {
     use miden_objects::{Digest, Felt, Word};
     use rand::Rng;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let recipient_word = Word::from([
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
     ]);
     let asset_commitment_word = Word::from([
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
-        Felt::new(rng.gen::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
+        Felt::new(rng.random::<u64>()),
     ]);
 
     let recipient = Digest::from(recipient_word);
@@ -200,10 +200,10 @@ pub fn random_note_id() -> NoteId {
 pub const TEST_TAG: u32 = 3221225472;
 pub fn test_note_header() -> NoteHeader {
     use miden_objects::{
+        Felt,
         account::AccountId,
         note::{NoteExecutionHint, NoteMetadata, NoteType},
         testing::account_id::ACCOUNT_ID_MAX_ZEROES,
-        Felt,
     };
 
     let id = random_note_id();
@@ -220,8 +220,8 @@ pub fn test_note_header() -> NoteHeader {
 
 pub fn mock_note_p2id() -> miden_objects::note::Note {
     use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let (account, _seed) = AccountBuilder::new(rng.gen())
+    let mut rng = rand::rng();
+    let (account, _seed) = AccountBuilder::new(rng.random())
         .storage_mode(AccountStorageMode::Public)
         .with_component(BasicWallet)
         .with_auth_component(Auth::BasicAuth)

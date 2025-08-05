@@ -1,7 +1,7 @@
 use self::grpc::{GrpcServer, GrpcServerConfig};
 use crate::{
-    database::{Database, DatabaseConfig},
     Result,
+    database::{Database, DatabaseConfig},
 };
 use std::sync::Arc;
 use tracing::{error, info};
