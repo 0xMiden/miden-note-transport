@@ -2,7 +2,7 @@ use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use clap::{Parser, Subcommand};
 use miden_objects::{note::Note, utils::Deserializable};
 use miden_transport::{
-    Result,
+    Error, Result,
     client::{Client, FilesystemEncryptionStore, crypto, grpc::GrpcClient},
 };
 use tracing::info;
@@ -113,7 +113,8 @@ async fn send_note(client: &mut Client, data: &str, recipient_key: &str) -> Resu
         miden_transport::Error::InvalidNoteData(format!("Invalid base64 data: {e}"))
     })?;
 
-    let note = Note::read_from_bytes(&bytes).unwrap();
+    let note = Note::read_from_bytes(&bytes)
+        .map_err(|e| Error::InvalidNoteData(format!("Failed to deserialize Note: {e}")))?;
 
     // Decode base64 recipient key
     let pub_key = BASE64
