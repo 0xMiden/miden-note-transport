@@ -1,8 +1,8 @@
 use miden_transport::{
-    client::{grpc::GrpcClient, Client, FilesystemEncryptionStore},
-    node::grpc::GrpcServerConfig,
-    types::{mock_note_p2id, NoteStatus, UserId},
     Node, NodeConfig,
+    client::{Client, FilesystemEncryptionStore, grpc::GrpcClient},
+    node::grpc::GrpcServerConfig,
+    types::{NoteStatus, UserId, mock_note_p2id},
 };
 use serial_test::serial;
 use std::time::Duration;

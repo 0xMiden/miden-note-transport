@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use aes_gcm::{
-    aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
+    aead::{Aead, KeyInit},
 };
 use rand::{Rng, RngCore};
 
@@ -17,7 +17,7 @@ pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
 
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let mut nonce_bytes = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
+    rand::rng().fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     let ciphertext = cipher
@@ -59,13 +59,13 @@ pub fn decrypt(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
 /// Generate a random encryption key
 pub fn generate_key() -> Vec<u8> {
     let mut key = vec![0u8; 32];
-    rand::thread_rng().fill_bytes(&mut key);
+    rand::rng().fill_bytes(&mut key);
     key
 }
 
 /// Generate a random note tag
 pub fn generate_note_tag() -> u32 {
-    rand::thread_rng().gen()
+    rand::rng().random()
 }
 
 /// Validate encryption key format

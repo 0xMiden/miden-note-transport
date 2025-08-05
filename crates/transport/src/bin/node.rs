@@ -1,6 +1,6 @@
 use clap::Parser;
 use miden_transport::{
-    database::DatabaseConfig, node::grpc::GrpcServerConfig, Node, NodeConfig, Result,
+    Node, NodeConfig, Result, database::DatabaseConfig, node::grpc::GrpcServerConfig,
 };
 use tracing::info;
 

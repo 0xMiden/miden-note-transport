@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     database::Database,
     types::{EncryptedDetails, NoteId},
-    Result,
 };
 use chrono::Utc;
 use miden_objects::utils::{Deserializable, Serializable};
