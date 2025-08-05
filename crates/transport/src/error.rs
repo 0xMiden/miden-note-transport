@@ -41,9 +41,6 @@ pub enum Error {
     #[error("Invalid tag: {0}")]
     InvalidTag(String),
 
-    #[error("Invalid block number: {0}")]
-    InvalidBlockNumber(String),
-
     #[error("Note too large: max size is {max_size} bytes, got {actual_size} bytes")]
     NoteTooLarge { max_size: usize, actual_size: usize },
 
