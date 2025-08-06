@@ -1,6 +1,6 @@
 use miden_transport::{
     Node, NodeConfig,
-    client::{Client, FilesystemEncryptionStore, grpc::GrpcClient},
+    client::{FilesystemEncryptionStore, TransportLayerClient, grpc::GrpcClient},
     node::grpc::GrpcServerConfig,
     types::{NoteStatus, UserId, mock_note_p2id},
 };
@@ -30,7 +30,7 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
 
     let grpc_client = Box::new(GrpcClient::connect(url, timeout_ms, Some(UserId::random())).await?);
     let encryption_store = Box::new(FilesystemEncryptionStore::new("/tmp")?);
-    let mut client = Client::new(grpc_client, encryption_store);
+    let mut client = TransportLayerClient::new(grpc_client, encryption_store);
     // TODO make use of EncryptionStore
     let key = miden_transport::client::crypto::generate_key();
 
