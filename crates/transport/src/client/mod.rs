@@ -74,12 +74,12 @@ impl EncryptionStore for FilesystemEncryptionStore {
 }
 
 /// Client for interacting with the transport layer
-pub struct Client {
+pub struct TransportLayerClient {
     transport_client: Box<dyn TransportClient>,
     encryption_store: Box<dyn EncryptionStore>,
 }
 
-impl Client {
+impl TransportLayerClient {
     pub fn new(
         transport_client: Box<dyn TransportClient>,
         encryption_store: Box<dyn EncryptionStore>,

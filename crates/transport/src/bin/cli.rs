@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use miden_objects::{note::Note, utils::Deserializable};
 use miden_transport::{
     Error, Result,
-    client::{Client, FilesystemEncryptionStore, crypto, grpc::GrpcClient},
+    client::{FilesystemEncryptionStore, TransportLayerClient, crypto, grpc::GrpcClient},
 };
 use tracing::info;
 
@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     let grpc =
         GrpcClient::connect(args.endpoint, args.timeout, args.user_id.map(|s| s.into())).await?;
     let encryption_store = FilesystemEncryptionStore::new("./keys")?;
-    let mut client = Client::new(Box::new(grpc), Box::new(encryption_store));
+    let mut client = TransportLayerClient::new(Box::new(grpc), Box::new(encryption_store));
 
     match args.command {
         Commands::Send {
@@ -108,7 +108,11 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn send_note(client: &mut Client, data: &str, recipient_key: &str) -> Result<()> {
+async fn send_note(
+    client: &mut TransportLayerClient,
+    data: &str,
+    recipient_key: &str,
+) -> Result<()> {
     let bytes = BASE64.decode(data).map_err(|e| {
         miden_transport::Error::InvalidNoteData(format!("Invalid base64 data: {e}"))
     })?;
@@ -137,7 +141,7 @@ async fn send_note(client: &mut Client, data: &str, recipient_key: &str) -> Resu
     Ok(())
 }
 
-async fn fetch_notes(client: &mut Client, tag: u32, private_key: &str) -> Result<()> {
+async fn fetch_notes(client: &mut TransportLayerClient, tag: u32, private_key: &str) -> Result<()> {
     info!("Fetching notes for tag {}", tag);
 
     // Decode base64 private key
@@ -180,24 +184,24 @@ fn generate_tag() {
     println!("Generated note tag: {tag}");
 }
 
-async fn health_check(_client: &Client) -> Result<()> {
+async fn health_check(_client: &TransportLayerClient) -> Result<()> {
     info!("Checking node health");
 
     // For now, we'll need to access the API client directly
-    // This is a limitation of the current Client design
-    println!("❌ Health check not implemented in Client");
-    println!("Use ApiClient directly for health checks");
+    // This is a limitation of the current TransportLayerClient design
+    println!("❌ Health check not implemented in TransportLayerClient");
+    println!("Use GrpcClient directly for health checks");
 
     Ok(())
 }
 
-async fn get_stats(_client: &Client) -> Result<()> {
+async fn get_stats(_client: &TransportLayerClient) -> Result<()> {
     info!("Getting node statistics");
 
     // For now, we'll need to access the API client directly
-    // This is a limitation of the current Client design
-    println!("❌ Stats not implemented in Client");
-    println!("Use ApiClient directly for statistics");
+    // This is a limitation of the current TransportLayerClient design
+    println!("❌ Stats not implemented in TransportLayerClient");
+    println!("Use GrpcClient directly for statistics");
 
     Ok(())
 }
