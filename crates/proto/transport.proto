@@ -9,24 +9,23 @@ import "miden-node/proto/proto/types/note.proto";
 // Note status enum
 enum NoteStatus {
     SENT = 0;
-    MARKED = 1;
-    DUPLICATE = 2;
+    DUPLICATE = 1;
 }
 
-// Encrypted details wrapper
-message EncryptedDetails {
-    bytes data = 1;
+message EncryptedNote {
+    bytes header = 1;
+    bytes encrypted_details = 2;
 }
 
-// User ID wrapper
-message UserId {
-    string value = 1;
+message EncryptedNoteTimestamped {
+    bytes header = 1;
+    bytes encrypted_details = 2;
+    google.protobuf.Timestamp timestamp = 3;
 }
 
 // API request for sending a note
 message SendNoteRequest {
-    bytes header = 1;
-    EncryptedDetails encrypted_details = 2;
+    EncryptedNote note = 1;
 }
 
 // API response for sending a note
@@ -37,31 +36,13 @@ message SendNoteResponse {
 
 // API request for fetching notes
 message FetchNotesRequest {
-    string tag = 1;  // NoteTag as hex string
-    UserId user_id = 2;
+    uint32 tag = 1;
+    google.protobuf.Timestamp timestamp = 2;
 }
 
 // API response for fetching notes
 message FetchNotesResponse {
-    repeated NoteInfo notes = 1;
-}
-
-// Information about a note in API responses
-message NoteInfo {
-    bytes header = 1;
-    EncryptedDetails encrypted_data = 2;
-    google.protobuf.Timestamp created_at = 3;
-}
-
-// API request for marking a note as received
-message MarkReceivedRequest {
-    repeated string note_ids = 1;  // NoteIds as hex string
-    UserId user_id = 2;
-}
-
-// API response for marking a note as received
-message MarkReceivedResponse {
-    repeated NoteStatus status = 1;
+    repeated EncryptedNoteTimestamped notes = 1;
 }
 
 // Server health check response
@@ -80,7 +61,7 @@ message StatsResponse {
 
 // Statistics for a specific tag
 message TagStats {
-    string tag = 1;  // NoteTag as hex string
+    uint32 tag = 1;  // NoteTag as hex string
     uint64 note_count = 2;
     google.protobuf.Timestamp last_activity = 3;
 }
@@ -92,9 +73,6 @@ service MidenTransport {
     
     // Fetch notes for a specific tag
     rpc FetchNotes(FetchNotesRequest) returns (FetchNotesResponse);
-    
-    // Mark a note as received
-    rpc MarkReceived(MarkReceivedRequest) returns (MarkReceivedResponse);
     
     // Health check
     rpc Health(google.protobuf.Empty) returns (HealthResponse);

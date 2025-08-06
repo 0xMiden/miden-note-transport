@@ -1,11 +1,11 @@
-use super::{DatabaseBackend, DatabaseConfig};
 use crate::{
     Error, Result,
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteTag, StoredNote, UserId},
+    database::{DatabaseBackend, DatabaseConfig},
+    types::{NoteHeader, NoteId, NoteTag, StoredNote},
 };
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
-use sqlx::{Row, sqlite::SqlitePool};
+use sqlx::{Row, SqlitePool};
 
 /// SQLite implementation of the database backend
 pub struct SQLiteDB {
@@ -26,6 +26,7 @@ impl DatabaseBackend for SQLiteDB {
                 header BLOB NOT NULL,
                 encrypted_data BLOB NOT NULL,
                 created_at TEXT NOT NULL,
+                received_at TEXT NOT NULL,
                 received_by TEXT
             ) STRICT;
             "#,
@@ -37,6 +38,7 @@ impl DatabaseBackend for SQLiteDB {
             r#"
             CREATE INDEX IF NOT EXISTS idx_notes_tag ON notes(tag);
             CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at);
+            CREATE INDEX IF NOT EXISTS idx_notes_received_at ON notes(received_at);
             "#,
         )
         .execute(&pool)
@@ -54,15 +56,16 @@ impl DatabaseBackend for SQLiteDB {
 
         sqlx::query(
             r#"
-            INSERT INTO notes (id, tag, header, encrypted_data, created_at, received_by)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO notes (id, tag, header, encrypted_data, created_at, received_at, received_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(&note.header.id().inner().as_bytes()[..])
         .bind(note.header.metadata().tag().as_u32() as i64)
         .bind(note.header.to_bytes())
-        .bind(&note.encrypted_data.0)
+        .bind(&note.encrypted_data)
         .bind(note.created_at.to_rfc3339())
+        .bind(note.received_at.to_rfc3339())
         .bind(received_by_json)
         .execute(&self.pool)
         .await?;
@@ -70,32 +73,17 @@ impl DatabaseBackend for SQLiteDB {
         Ok(())
     }
 
-    async fn fetch_notes(&self, tag: NoteTag, user_id: Option<UserId>) -> Result<Vec<StoredNote>> {
-        let query = if let Some(user_id) = user_id {
-            // Filter out notes that have been received by the specified user_id
-            sqlx::query(
-                r#"
-                SELECT id, tag, header, encrypted_data, created_at, received_by
+    async fn fetch_notes(&self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<StoredNote>> {
+        let query = sqlx::query(
+            r#"
+                SELECT id, tag, header, encrypted_data, created_at, received_at, received_by
                 FROM notes
-                WHERE tag = ?
-                AND (received_by = '[]' OR received_by NOT LIKE ?)
-                ORDER BY created_at ASC
+                WHERE tag = ? AND received_at > ?
+                ORDER BY received_at ASC
                 "#,
-            )
-            .bind(tag.as_u32() as i64)
-            .bind(format!("%\"{}\"%", user_id.0))
-        } else {
-            // No user filtering
-            sqlx::query(
-                r#"
-                SELECT id, tag, header, encrypted_data, created_at, received_by
-                FROM notes
-                WHERE tag = ?
-                ORDER BY created_at ASC
-                "#,
-            )
-            .bind(tag.as_u32() as i64)
-        };
+        )
+        .bind(tag.as_u32() as i64)
+        .bind(timestamp.to_rfc3339());
 
         let rows = query.fetch_all(&self.pool).await?;
         let mut notes = Vec::new();
@@ -110,6 +98,16 @@ impl DatabaseBackend for SQLiteDB {
                 .map_err(|e| {
                     Error::Database(sqlx::Error::ColumnDecode {
                         index: "created_at".to_string(),
+                        source: Box::new(e),
+                    })
+                })?
+                .with_timezone(&Utc);
+
+            let received_at_str: String = row.try_get("received_at")?;
+            let received_at = DateTime::parse_from_rfc3339(&received_at_str)
+                .map_err(|e| {
+                    Error::Database(sqlx::Error::ColumnDecode {
+                        index: "received_at".to_string(),
                         source: Box::new(e),
                     })
                 })?
@@ -132,8 +130,9 @@ impl DatabaseBackend for SQLiteDB {
 
             let note = StoredNote {
                 header,
-                encrypted_data: EncryptedDetails(encrypted_data),
+                encrypted_data,
                 created_at,
+                received_at,
                 received_by,
             };
 
@@ -141,52 +140,6 @@ impl DatabaseBackend for SQLiteDB {
         }
 
         Ok(notes)
-    }
-
-    async fn mark_received(&self, note_ids: Vec<NoteId>, user_id: UserId) -> Result<()> {
-        // Use a transaction to ensure atomicity when updating multiple notes
-        let mut tx = self.pool.begin().await?;
-
-        for note_id in note_ids {
-            // First, get the current received_by list
-            let row = sqlx::query(
-                r#"
-                SELECT received_by FROM notes WHERE id = ?
-                "#,
-            )
-            .bind(&note_id.inner().as_bytes()[..])
-            .fetch_one(&mut *tx)
-            .await?;
-
-            let received_by_json: String = row.try_get("received_by")?;
-            let mut received_by: Vec<String> = if received_by_json == "[]" {
-                Vec::new()
-            } else {
-                serde_json::from_str(&received_by_json)?
-            };
-
-            // Add the user if not already present
-            if !received_by.contains(&user_id.0) {
-                received_by.push(user_id.0.clone());
-            }
-
-            let updated_json = serde_json::to_string(&received_by)?;
-
-            sqlx::query(
-                r#"
-                UPDATE notes SET received_by = ? WHERE id = ?
-                "#,
-            )
-            .bind(updated_json)
-            .bind(&note_id.inner().as_bytes()[..])
-            .execute(&mut *tx)
-            .await?;
-        }
-
-        // Commit the transaction
-        tx.commit().await?;
-
-        Ok(())
     }
 
     async fn get_stats(&self) -> Result<(u64, u64)> {

@@ -1,16 +1,12 @@
-use crate::{
-    Result,
-    database::Database,
-    types::{EncryptedDetails, NoteId},
-};
-use chrono::Utc;
+use crate::{Result, database::Database};
+use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
 use miden_transport_proto::miden_transport::miden_transport_server::MidenTransportServer;
 use miden_transport_proto::miden_transport::{
-    EncryptedDetails as ProtoEncryptedDetails, FetchNotesRequest, FetchNotesResponse,
-    HealthResponse, MarkReceivedRequest, MarkReceivedResponse, NoteInfo as ProtoNoteInfo,
+    EncryptedNoteTimestamped, FetchNotesRequest, FetchNotesResponse, HealthResponse,
     NoteStatus as ProtoNoteStatus, SendNoteRequest, SendNoteResponse, StatsResponse,
 };
+use prost_types;
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{Request, Response, Status};
 
@@ -66,32 +62,25 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
     ) -> std::result::Result<Response<SendNoteResponse>, Status> {
         let request = request.into_inner();
 
+        let note = request
+            .note
+            .ok_or_else(|| Status::invalid_argument("Missing note"))?;
+
         // Validate note size
-        if request
-            .encrypted_details
-            .as_ref()
-            .map(|d| d.data.len())
-            .unwrap_or(0)
-            > self.config.max_note_size
-        {
+        if note.encrypted_details.len() > self.config.max_note_size {
             return Err(Status::resource_exhausted("Note too large"));
         }
 
         // Convert protobuf request to internal types
-        let header = miden_objects::note::NoteHeader::read_from_bytes(&request.header)
+        let header = miden_objects::note::NoteHeader::read_from_bytes(&note.header)
             .map_err(|e| Status::invalid_argument(format!("Invalid header: {e:?}")))?;
-
-        let encrypted_details = request
-            .encrypted_details
-            .ok_or_else(|| Status::invalid_argument("Missing encrypted_details"))?;
-
-        let encrypted_details = EncryptedDetails(encrypted_details.data);
 
         // Create note for database
         let note = crate::types::StoredNote {
             header,
-            encrypted_data: encrypted_details,
+            encrypted_data: note.encrypted_details,
             created_at: Utc::now(),
+            received_at: Utc::now(),
             received_by: None,
         };
 
@@ -113,67 +102,35 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
     ) -> std::result::Result<Response<FetchNotesResponse>, Status> {
         let request = request.into_inner();
 
-        // Parse tag from hex string
-        let tag = u32::from_str_radix(&request.tag, 16)
-            .map_err(|e| Status::invalid_argument(format!("Invalid tag format: {e:?}")))?
-            .into();
+        // Default to epoch start (1970-01-01) to fetch all notes if no timestamp provided
+        let timestamp = if let Some(ts) = request.timestamp {
+            DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
+                .ok_or_else(|| Status::invalid_argument("Invalid timestamp"))?
+        } else {
+            DateTime::from_timestamp(0, 0).unwrap()
+        };
 
         // Fetch notes from database
         let notes = self
             .database
-            .fetch_notes(tag, request.user_id.map(|id| id.into()))
+            .fetch_notes(request.tag.into(), timestamp)
             .await
             .map_err(|e| Status::internal(format!("Failed to fetch notes: {e:?}")))?;
 
         // Convert to protobuf format
         let proto_notes = notes
             .into_iter()
-            .map(|note| ProtoNoteInfo {
+            .map(|note| EncryptedNoteTimestamped {
                 header: note.header.to_bytes(),
-                encrypted_data: Some(ProtoEncryptedDetails {
-                    data: note.encrypted_data.0,
-                }),
-                created_at: Some(prost_types::Timestamp {
-                    seconds: note.created_at.timestamp(),
-                    nanos: note.created_at.timestamp_subsec_nanos() as i32,
+                encrypted_details: note.encrypted_data,
+                timestamp: Some(prost_types::Timestamp {
+                    seconds: note.received_at.timestamp(),
+                    nanos: note.received_at.timestamp_subsec_nanos() as i32,
                 }),
             })
             .collect();
 
         Ok(Response::new(FetchNotesResponse { notes: proto_notes }))
-    }
-
-    async fn mark_received(
-        &self,
-        request: Request<MarkReceivedRequest>,
-    ) -> std::result::Result<Response<MarkReceivedResponse>, Status> {
-        let request = request.into_inner();
-
-        // Parse note ID from hex string
-        let note_ids: Vec<NoteId> = request
-            .note_ids
-            .iter()
-            .map(|hex| {
-                NoteId::try_from_hex(hex)
-                    .map_err(|e| Status::invalid_argument(format!("Invalid note ID: {e:?}")))
-            })
-            .collect::<std::result::Result<Vec<_>, Status>>()?;
-        let len = note_ids.len();
-
-        let user_id = request
-            .user_id
-            .ok_or(Status::invalid_argument("User ID is absent".to_string()))?;
-
-        // Mark note as received
-        self.database
-            .mark_received(note_ids, user_id.into())
-            .await
-            .map_err(|e| Status::internal(format!("Failed to mark note received: {e:?}")))?;
-
-        // TODO more detailed response
-        Ok(Response::new(MarkReceivedResponse {
-            status: vec![ProtoNoteStatus::Marked as i32; len],
-        }))
     }
 
     async fn health(

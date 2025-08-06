@@ -2,7 +2,7 @@ use miden_transport::{
     Node, NodeConfig,
     client::{FilesystemEncryptionStore, TransportLayerClient, grpc::GrpcClient},
     node::grpc::GrpcServerConfig,
-    types::{NoteStatus, UserId, mock_note_p2id},
+    types::{NoteStatus, mock_note_p2id},
 };
 use serial_test::serial;
 use std::time::Duration;
@@ -28,7 +28,7 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
 
     sleep(Duration::from_millis(100)).await;
 
-    let grpc_client = Box::new(GrpcClient::connect(url, timeout_ms, Some(UserId::random())).await?);
+    let grpc_client = Box::new(GrpcClient::connect(url, timeout_ms).await?);
     let encryption_store = Box::new(FilesystemEncryptionStore::new("/tmp")?);
     let mut client = TransportLayerClient::new(grpc_client, encryption_store);
     // TODO make use of EncryptionStore
@@ -44,8 +44,6 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(id, header.id());
     assert_eq!(status, NoteStatus::Sent);
 
-    let note_id = send_response.0;
-
     // Fetch note back
     let fetch_response = client.fetch_notes(sent_tag, &key).await?;
     let infos = fetch_response;
@@ -54,11 +52,6 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
 
     let tag = header.metadata().tag();
     assert_eq!(tag, sent_tag);
-
-    // Mark note as received
-    client.mark_received(&[note_id]).await?;
-    let notes = client.fetch_notes(sent_tag, &key).await?;
-    assert_eq!(notes.len(), 0);
 
     handle.abort();
 

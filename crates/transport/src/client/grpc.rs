@@ -1,4 +1,5 @@
 use miden_objects::utils::{Deserializable, Serializable};
+use prost_types;
 use std::time::Duration;
 use tonic::{
     Request,
@@ -8,26 +9,21 @@ use tower::timeout::Timeout;
 
 use crate::{
     Error, Result,
-    types::{EncryptedDetails, NoteHeader, NoteId, NoteInfo, NoteTag, UserId},
+    types::{NoteHeader, NoteId, NoteInfo, NoteTag},
 };
+use chrono::{DateTime, Utc};
 
 use miden_transport_proto::miden_transport::miden_transport_client::MidenTransportClient;
-use miden_transport_proto::miden_transport::{
-    EncryptedDetails as ProtoEncryptedDetails, FetchNotesRequest, MarkReceivedRequest,
-    SendNoteRequest,
-};
+use miden_transport_proto::miden_transport::{EncryptedNote, FetchNotesRequest, SendNoteRequest};
 
 pub struct GrpcClient {
     client: MidenTransportClient<Timeout<Channel>>,
-    user_id: Option<UserId>,
+    // Last fetched timestamp
+    lts: DateTime<Utc>,
 }
 
 impl GrpcClient {
-    pub async fn connect(
-        endpoint: String,
-        timeout_ms: u64,
-        user_id: Option<UserId>,
-    ) -> Result<Self> {
+    pub async fn connect(endpoint: String, timeout_ms: u64) -> Result<Self> {
         let tls = ClientTlsConfig::new().with_native_roots();
         let channel = Channel::from_shared(endpoint.clone())
             .map_err(|e| Error::Internal(format!("Invalid endpoint URI: {e}")))?
@@ -37,19 +33,20 @@ impl GrpcClient {
         let timeout = Duration::from_millis(timeout_ms);
         let timeout_channel = Timeout::new(channel, timeout);
         let client = MidenTransportClient::new(timeout_channel);
+        let lts = DateTime::from_timestamp(0, 0).unwrap();
 
-        Ok(Self { client, user_id })
+        Ok(Self { client, lts })
     }
 
     pub async fn send_note(
         &mut self,
         header: NoteHeader,
-        encrypted_details: EncryptedDetails,
+        encrypted_details: Vec<u8>,
     ) -> Result<NoteId> {
         let request = SendNoteRequest {
-            header: header.to_bytes(),
-            encrypted_details: Some(ProtoEncryptedDetails {
-                data: encrypted_details.0,
+            note: Some(EncryptedNote {
+                header: header.to_bytes(),
+                encrypted_details,
             }),
         };
 
@@ -71,8 +68,11 @@ impl GrpcClient {
 
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>> {
         let request = FetchNotesRequest {
-            tag: format!("{:08x}", tag.as_u32()),
-            user_id: self.user_id.as_ref().map(|id| id.clone().into()),
+            tag: tag.as_u32(),
+            timestamp: Some(prost_types::Timestamp {
+                seconds: self.lts.timestamp(),
+                nanos: self.lts.timestamp_subsec_nanos() as i32,
+            }),
         };
 
         let response = self
@@ -84,51 +84,38 @@ impl GrpcClient {
 
         let response = response.into_inner();
 
-        // Convert protobuf notes to internal format
-        let notes = response
-            .notes
-            .into_iter()
-            .map(|proto_note| {
-                let header = NoteHeader::read_from_bytes(&proto_note.header)
-                    .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
+        // Convert protobuf notes to internal format and track the most recent received timestamp
+        let mut notes = Vec::new();
+        let mut latest_received_at = self.lts;
 
-                let encrypted_data = proto_note
-                    .encrypted_data
-                    .ok_or_else(|| Error::Internal("Missing encrypted data".to_string()))?;
+        for note in response.notes {
+            let header = NoteHeader::read_from_bytes(&note.header)
+                .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
 
-                let created_at = proto_note
-                    .created_at
-                    .ok_or_else(|| Error::Internal("Missing created_at".to_string()))?;
+            // Convert protobuf timestamp to DateTime
+            let received_at = if let Some(timestamp) = note.timestamp {
+                chrono::DateTime::from_timestamp(timestamp.seconds, timestamp.nanos as u32)
+                    .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?
+            } else {
+                Utc::now() // Fallback to current time if timestamp is missing
+            };
 
-                let created_at =
-                    chrono::DateTime::from_timestamp(created_at.seconds, created_at.nanos as u32)
-                        .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?;
+            // Update the latest received timestamp
+            if received_at > latest_received_at {
+                latest_received_at = received_at;
+            }
 
-                Ok(NoteInfo {
-                    header,
-                    encrypted_data: EncryptedDetails(encrypted_data.data),
-                    created_at,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+            notes.push(NoteInfo {
+                header,
+                encrypted_data: note.encrypted_details,
+                created_at: received_at,
+            });
+        }
+
+        // Update the last timestamp to the most recent received timestamp
+        self.lts = latest_received_at;
 
         Ok(notes)
-    }
-
-    pub async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
-        let hexs = note_ids.iter().map(|id| id.to_hex()).collect::<Vec<_>>();
-        let request = MarkReceivedRequest {
-            note_ids: hexs,
-            user_id: self.user_id.as_ref().map(|id| id.clone().into()),
-        };
-
-        self.client
-            .clone()
-            .mark_received(Request::new(request))
-            .await
-            .map_err(|e| Error::Internal(format!("Mark received failed: {e:?}")))?;
-
-        Ok(())
     }
 
     /// Health check
@@ -167,9 +154,6 @@ impl GrpcClient {
             .notes_per_tag
             .into_iter()
             .map(|tag_stats| {
-                let tag = u32::from_str_radix(&tag_stats.tag, 16)
-                    .map_err(|e| Error::Internal(format!("Invalid tag format: {e:?}")))?;
-
                 let last_activity = tag_stats
                     .last_activity
                     .map(|ts| {
@@ -179,7 +163,7 @@ impl GrpcClient {
                     .transpose()?;
 
                 Ok(crate::types::TagStats {
-                    tag: tag.into(),
+                    tag: tag_stats.tag.into(),
                     note_count: tag_stats.note_count,
                     last_activity,
                 })
@@ -199,7 +183,7 @@ impl super::TransportClient for GrpcClient {
     async fn send_note(
         &mut self,
         header: NoteHeader,
-        encrypted_note: EncryptedDetails,
+        encrypted_note: Vec<u8>,
     ) -> Result<(NoteId, crate::types::NoteStatus)> {
         let note_id = self.send_note(header, encrypted_note).await?;
         Ok((note_id, crate::types::NoteStatus::Sent))
@@ -207,9 +191,5 @@ impl super::TransportClient for GrpcClient {
 
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<crate::types::NoteInfo>> {
         self.fetch_notes(tag).await
-    }
-
-    async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
-        self.mark_received(note_ids).await
     }
 }

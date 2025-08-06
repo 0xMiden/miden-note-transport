@@ -8,77 +8,18 @@ use miden_testing::Auth;
 use serde::{Deserialize, Serialize};
 
 // Use miden-objects
-pub use miden_objects::note::{Note, NoteDetails, NoteHeader, NoteId, NoteTag, NoteType};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EncryptedDetails(pub Vec<u8>);
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct UserId(pub String);
+pub use miden_objects::{
+    block::BlockNumber,
+    note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NoteStatus {
     Sent,
-    Marked,
     Duplicate,
 }
 
-impl From<Vec<u8>> for EncryptedDetails {
-    fn from(value: Vec<u8>) -> Self {
-        EncryptedDetails(value)
-    }
-}
-
-impl UserId {
-    pub fn new(id: String) -> Self {
-        UserId(id)
-    }
-
-    /// Creates a random UUID v4
-    pub fn random() -> Self {
-        Self::new(uuid::Uuid::new_v4().to_string())
-    }
-}
-
-impl From<String> for UserId {
-    fn from(value: String) -> Self {
-        UserId(value)
-    }
-}
-
-impl From<miden_transport_proto::UserId> for UserId {
-    fn from(proto: miden_transport_proto::UserId) -> Self {
-        UserId(proto.value)
-    }
-}
-
-impl From<UserId> for miden_transport_proto::UserId {
-    fn from(id: UserId) -> Self {
-        miden_transport_proto::UserId { value: id.0 }
-    }
-}
-
-impl std::fmt::Display for UserId {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::ops::Deref for EncryptedDetails {
-    type Target = Vec<u8>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for EncryptedDetails {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-/// Note stored in the database
+/// A note stored in the database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredNote {
     #[serde(
@@ -86,8 +27,9 @@ pub struct StoredNote {
         deserialize_with = "deserialize_note_header"
     )]
     pub header: NoteHeader,
-    pub encrypted_data: EncryptedDetails,
+    pub encrypted_data: Vec<u8>,
     pub created_at: DateTime<Utc>,
+    pub received_at: DateTime<Utc>,
     pub received_by: Option<Vec<String>>,
 }
 
@@ -99,7 +41,7 @@ pub struct NoteInfo {
         deserialize_with = "deserialize_note_header"
     )]
     pub header: NoteHeader,
-    pub encrypted_data: EncryptedDetails,
+    pub encrypted_data: Vec<u8>,
     pub created_at: DateTime<Utc>,
 }
 
