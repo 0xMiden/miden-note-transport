@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the generated directory if it doesn't exist
     std::fs::create_dir_all(generated_dir)?;
 
-    tonic_prost_build::configure()
+    tonic_build::configure()
         .build_server(true)
         .build_client(true)
         .out_dir(generated_dir)

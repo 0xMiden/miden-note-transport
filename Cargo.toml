@@ -5,3 +5,6 @@ members = [
     "crates/proto",
     "crates/transport",
 ]
+
+[workspace.dependencies]
+tonic = { version = "0.13" }
