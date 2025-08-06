@@ -76,8 +76,7 @@ async fn main() -> Result<()> {
     info!("Endpoint: {}", args.endpoint);
 
     // Create client
-    let grpc =
-        GrpcClient::connect(args.endpoint, args.timeout, args.user_id.map(|s| s.into())).await?;
+    let grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
     let encryption_store = FilesystemEncryptionStore::new("./keys")?;
     let mut client = TransportLayerClient::new(Box::new(grpc), Box::new(encryption_store));
 

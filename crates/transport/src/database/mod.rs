@@ -3,8 +3,9 @@ mod sqlite;
 use self::sqlite::SQLiteDB;
 use crate::{
     Result,
-    types::{NoteId, NoteTag, StoredNote, UserId},
+    types::{NoteId, NoteTag, StoredNote},
 };
+use chrono::{DateTime, Utc};
 
 /// Database operations
 #[async_trait::async_trait]
@@ -18,10 +19,7 @@ pub trait DatabaseBackend: Send + Sync {
     async fn store_note(&self, note: &StoredNote) -> Result<()>;
 
     /// Fetch notes by tag
-    async fn fetch_notes(&self, tag: NoteTag, user_id: Option<UserId>) -> Result<Vec<StoredNote>>;
-
-    /// Mark a note as received by a user
-    async fn mark_received(&self, note_id: Vec<NoteId>, user_id: UserId) -> Result<()>;
+    async fn fetch_notes(&self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<StoredNote>>;
 
     /// Get statistics about the database
     async fn get_stats(&self) -> Result<(u64, u64)>;
@@ -77,14 +75,9 @@ impl Database {
     pub async fn fetch_notes(
         &self,
         tag: NoteTag,
-        user_id: Option<UserId>,
+        timestamp: DateTime<Utc>,
     ) -> Result<Vec<StoredNote>> {
-        self.backend.fetch_notes(tag, user_id).await
-    }
-
-    /// Mark a note as received by a user
-    pub async fn mark_received(&self, note_id: Vec<NoteId>, user_id: UserId) -> Result<()> {
-        self.backend.mark_received(note_id, user_id).await
+        self.backend.fetch_notes(tag, timestamp).await
     }
 
     /// Get statistics about the database
@@ -106,24 +99,25 @@ impl Database {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{EncryptedDetails, TEST_TAG, test_note_header};
+    use crate::types::{TEST_TAG, test_note_header};
     use chrono::Utc;
 
     #[tokio::test]
     async fn test_sqlite_database() {
         let db = Database::connect(DatabaseConfig::default()).await.unwrap();
-        let user1 = UserId::random();
+        let start = Utc::now();
 
         let note = StoredNote {
             header: test_note_header(),
-            encrypted_data: EncryptedDetails(vec![1, 2, 3, 4]),
+            encrypted_data: vec![1, 2, 3, 4],
             created_at: Utc::now(),
+            received_at: Utc::now(),
             received_by: None,
         };
 
         db.store_note(&note).await.unwrap();
 
-        let fetched_notes = db.fetch_notes(TEST_TAG.into(), user1.into()).await.unwrap();
+        let fetched_notes = db.fetch_notes(TEST_TAG.into(), start).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
@@ -137,59 +131,36 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mark_received() {
+    async fn test_fetch_notes_timestamp_filtering() {
         let db = Database::connect(DatabaseConfig::default()).await.unwrap();
-        let user1 = UserId::random();
-        let user2 = UserId::random();
 
-        let note1 = StoredNote {
+        // Create a note with a specific received_at time
+        let received_time = Utc::now();
+        let note = StoredNote {
             header: test_note_header(),
-            encrypted_data: EncryptedDetails(vec![9, 10, 11, 12]),
-            created_at: Utc::now(),
+            encrypted_data: vec![1, 2, 3, 4],
+            created_at: received_time,
+            received_at: received_time,
             received_by: None,
         };
 
-        let note2 = StoredNote {
-            header: test_note_header(),
-            encrypted_data: EncryptedDetails(vec![13, 14, 15, 16]),
-            created_at: Utc::now(),
-            received_by: None,
-        };
+        db.store_note(&note).await.unwrap();
 
-        db.store_note(&note1).await.unwrap();
-        db.store_note(&note2).await.unwrap();
-
+        // Fetch notes with timestamp before the note was received - should return the note
+        let before_timestamp = received_time - chrono::Duration::seconds(1);
         let fetched_notes = db
-            .fetch_notes(TEST_TAG.into(), user1.clone().into())
+            .fetch_notes(TEST_TAG.into(), before_timestamp)
             .await
             .unwrap();
-        assert_eq!(fetched_notes.len(), 2);
+        assert_eq!(fetched_notes.len(), 1);
+        assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
-        // Mark all as received for user1
-        db.mark_received(vec![note1.header.id(), note2.header.id()], user1.clone())
+        // Fetch notes with timestamp after the note was received - should return empty
+        let after_timestamp = received_time + chrono::Duration::seconds(1);
+        let fetched_notes = db
+            .fetch_notes(TEST_TAG.into(), after_timestamp)
             .await
             .unwrap();
-        // Mark only 1 as received for user2
-        db.mark_received(vec![note1.header.id()], user2.clone())
-            .await
-            .unwrap();
-
-        // Fetch and verify received_by for user1
-        let fetched_notes_user1 = db
-            .fetch_notes(TEST_TAG.into(), user1.clone().into())
-            .await
-            .unwrap();
-        assert_eq!(fetched_notes_user1.len(), 0);
-
-        // Fetch and verify received_by for user2
-        let fetched_notes_user2 = db
-            .fetch_notes(TEST_TAG.into(), user2.clone().into())
-            .await
-            .unwrap();
-        assert_eq!(fetched_notes_user2.len(), 1);
-
-        // Fetch without user_id filter
-        let fetched_notes_all = db.fetch_notes(TEST_TAG.into(), None).await.unwrap();
-        assert_eq!(fetched_notes_all.len(), 2);
+        assert_eq!(fetched_notes.len(), 0);
     }
 }

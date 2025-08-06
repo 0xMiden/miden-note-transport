@@ -1,7 +1,7 @@
-use crate::types::{
-    EncryptedDetails, Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag,
+use crate::{
+    Error, Result,
+    types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
-use crate::{Error, Result};
 use miden_objects::utils::{Deserializable, Serializable};
 
 pub mod crypto;
@@ -14,14 +14,11 @@ pub trait TransportClient: Send + Sync {
     async fn send_note(
         &mut self,
         header: NoteHeader,
-        encrypted_note: EncryptedDetails,
+        encrypted_note: Vec<u8>,
     ) -> Result<(NoteId, NoteStatus)>;
 
     /// Fetch all notes for a given tag
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>>;
-
-    /// Mark a note as received to prevent re-downloading
-    async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()>;
 }
 
 /// Encryption store trait for managing encryption keys
@@ -102,9 +99,7 @@ impl TransportLayerClient {
         let encrypted = self
             .encryption_store
             .encrypt(&details_bytes, recipient_pub_key)?;
-        self.transport_client
-            .send_note(header, EncryptedDetails(encrypted))
-            .await
+        self.transport_client.send_note(header, encrypted).await
     }
 
     /// Fetch and decrypt notes for a tag
@@ -135,10 +130,5 @@ impl TransportLayerClient {
         }
 
         Ok(decrypted_notes)
-    }
-
-    /// Mark a note as received
-    pub async fn mark_received(&mut self, note_ids: &[NoteId]) -> Result<()> {
-        self.transport_client.mark_received(note_ids).await
     }
 }
