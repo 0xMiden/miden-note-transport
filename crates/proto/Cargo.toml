@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 # Protobuf
 prost = "0.13"
-prost-types = "0.13"
+prost-types.workspace = true
 tonic.workspace = true
 
 # Time handling

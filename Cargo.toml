@@ -7,4 +7,5 @@ members = [
 ]
 
 [workspace.dependencies]
+prost-types = { version = "0.13" }
 tonic = { version = "0.13" }
