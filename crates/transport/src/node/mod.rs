@@ -24,6 +24,7 @@ pub struct NodeConfig {
 }
 
 impl Node {
+    #[tracing::instrument]
     pub async fn init(config: NodeConfig) -> Result<Self> {
         let database = Arc::new(Database::connect(config.database).await?);
 

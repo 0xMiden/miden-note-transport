@@ -1,7 +1,7 @@
 pub mod client;
 pub mod database;
 pub mod error;
-//mod logging;
+pub mod logging;
 pub mod node;
 pub mod types;
 

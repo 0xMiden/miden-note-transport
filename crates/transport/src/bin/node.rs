@@ -1,6 +1,9 @@
 use clap::Parser;
 use miden_transport::{
-    Node, NodeConfig, Result, database::DatabaseConfig, node::grpc::GrpcServerConfig,
+    Node, NodeConfig, Result,
+    database::DatabaseConfig,
+    logging::{OpenTelemetry, setup_metrics, setup_tracing},
+    node::grpc::GrpcServerConfig,
 };
 use tracing::info;
 
@@ -35,15 +38,20 @@ struct Args {
     /// Request timeout in seconds
     #[arg(long, default_value = "30")]
     request_timeout_seconds: u64,
+
+    /// Enable OpenTelemetry exporter
+    #[arg(long, default_value = "disabled")]
+    open_telemetry: OpenTelemetry,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
-
     // Parse command line arguments
     let args = Args::parse();
+
+    // Initialize logging
+    setup_tracing(args.open_telemetry)?;
+    let _metrics_provider = setup_metrics();
 
     info!("Starting Miden Transport Node...");
     info!("Host: {}", args.host);
@@ -53,6 +61,7 @@ async fn main() -> Result<()> {
     info!("Retention days: {}", args.retention_days);
     info!("Rate limit: {} requests/minute", args.rate_limit_per_minute);
     info!("Request timeout: {} seconds", args.request_timeout_seconds);
+    info!("OpenTelemetry export: {:?}", args.open_telemetry);
 
     // Create Node config
     let config = NodeConfig {
@@ -68,6 +77,7 @@ async fn main() -> Result<()> {
             request_timeout_seconds: args.request_timeout_seconds,
             max_note_size: args.max_note_size,
         },
+        ..Default::default()
     };
 
     // Run Node

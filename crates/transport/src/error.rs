@@ -46,6 +46,9 @@ pub enum Error {
 
     #[error("Internal server error: {0}")]
     Internal(String),
+
+    #[error("Error: {0}")]
+    Unspecified(#[from] anyhow::Error),
 }
 
 impl From<tonic::Status> for Error {

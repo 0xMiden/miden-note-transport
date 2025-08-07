@@ -39,7 +39,10 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let header = *note.header();
     let sent_tag = header.metadata().tag();
 
-    let send_response = client.send_note(note, &key).await?;
+    let send_response = client.send_note(note.clone(), &key).await?;
+    for _ in 0..3 {
+        let send_response = client.send_note(mock_note_p2id(), &key).await?;
+    }
     let (id, status) = send_response;
     assert_eq!(id, header.id());
     assert_eq!(status, NoteStatus::Sent);

@@ -11,12 +11,14 @@ use miden_transport_proto::miden_transport::{
     HealthResponse, MarkReceivedRequest, MarkReceivedResponse, NoteInfo as ProtoNoteInfo,
     NoteStatus as ProtoNoteStatus, SendNoteRequest, SendNoteResponse, StatsResponse,
 };
+use opentelemetry::metrics::Counter;
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{Request, Response, Status};
 
 pub struct GrpcServer {
     database: Arc<Database>,
     config: GrpcServerConfig,
+    metrics: GrpcServerMetrics,
 }
 
 #[derive(Clone, Debug)]
@@ -24,6 +26,14 @@ pub struct GrpcServerConfig {
     pub host: String,
     pub port: u16,
     pub max_note_size: usize,
+}
+
+#[derive(Clone)]
+pub struct GrpcServerMetrics {
+    /// Total number of requests
+    pub requests: Counter<u64>,
+    pub requests_send_note: Counter<u64>,
+    pub requests_fetch_notes: Counter<u64>,
 }
 
 impl Default for GrpcServerConfig {
@@ -38,7 +48,24 @@ impl Default for GrpcServerConfig {
 
 impl GrpcServer {
     pub fn new(database: Arc<Database>, config: GrpcServerConfig) -> Self {
-        Self { database, config }
+        let _meter_provider = crate::logging::setup_metrics();
+        let meter = opentelemetry::global::meter("grpc-server");
+
+        // Create a Counter Instrument.
+        let requests = meter.u64_counter("requests").build();
+        let requests_send_note = meter.u64_counter("requests.send-note").build();
+        let requests_fetch_notes = meter.u64_counter("requests.fetch-notes").build();
+
+        let metrics = GrpcServerMetrics {
+            requests,
+            requests_send_note,
+            requests_fetch_notes,
+        };
+        Self {
+            database,
+            config,
+            metrics,
+        }
     }
 
     pub fn into_service(self) -> MidenTransportServer<Self> {
@@ -64,6 +91,8 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
         &self,
         request: Request<SendNoteRequest>,
     ) -> std::result::Result<Response<SendNoteResponse>, Status> {
+        self.metrics.requests.add(1, &[]);
+        self.metrics.requests_send_note.add(1, &[]);
         let request = request.into_inner();
 
         // Validate note size
@@ -111,6 +140,8 @@ impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransp
         &self,
         request: Request<FetchNotesRequest>,
     ) -> std::result::Result<Response<FetchNotesResponse>, Status> {
+        self.metrics.requests.add(1, &[]);
+        self.metrics.requests_fetch_notes.add(1, &[]);
         let request = request.into_inner();
 
         // Parse tag from hex string
