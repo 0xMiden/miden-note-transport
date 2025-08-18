@@ -1,0 +1,81 @@
+[package]
+authors.workspace      = true
+description            = "Miden Private Notes Transport"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["messaging", "miden"]
+license.workspace      = true
+name                   = "miden-private-transport"
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "miden-transport-node"
+path = "src/bin/node.rs"
+
+[[bin]]
+name = "miden-transport-cli"
+path = "src/bin/cli.rs"
+
+[dependencies]
+# Proto crate
+miden-private-transport-proto.workspace = true
+
+# Miden
+miden-lib     = "0.10"
+miden-objects = { workspace = true }
+miden-testing = "0.10"
+
+# gRPC server and client
+tokio = { workspace = true }
+tonic = { workspace = true }
+tower = { features = ["timeout"], version = "0.5" }
+
+# Serialization
+serde      = { features = ["derive"], version = "1.0" }
+serde_json = "1.0"
+
+# Protobuf
+prost-types = "0.13"
+
+# Database
+sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
+
+# Encryption
+aes-gcm = "0.10"
+rand    = "0.9"
+
+# CLI
+clap = { features = ["derive"], version = "4.5" }
+
+# Logging
+opentelemetry         = { version = "0.30" }
+opentelemetry-otlp    = { default-features = false, features = ["grpc-tonic", "tls-roots", "trace"], version = "0.30" }
+opentelemetry_sdk     = { features = ["rt-tokio", "testing"], version = "0.30" }
+tracing               = { workspace = true }
+tracing-opentelemetry = { version = "0.31" }
+tracing-subscriber    = { workspace = true }
+
+# Error handling
+anyhow    = "1.0"
+thiserror = "2.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Time handling
+chrono = { features = ["serde"], version = "0.4" }
+
+# Base64 encoding/decoding
+base64 = "0.22"
+
+[dev-dependencies]
+serial_test = "3.2"

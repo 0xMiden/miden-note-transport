@@ -1,0 +1,3 @@
+[submodule "crates/proto/miden-node"]
+	path = crates/proto/miden-node
+	url = https://github.com/0xMiden/miden-node.git

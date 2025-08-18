@@ -1,0 +1,23 @@
+[package]
+authors.workspace      = true
+description            = "Miden Private Notes Transport Protocol Buffers"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["miden", "proto"]
+license.workspace      = true
+name                   = "miden-private-transport-proto"
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lints]
+workspace = true
+
+[dependencies]
+prost           = "0.13"
+prost-types     = "0.13"
+tonic.workspace = true
+
+[build-dependencies]
+tonic-build = "0.13"
