@@ -1,0 +1,24 @@
+[package]
+authors.workspace      = true
+description            = "Miden Private Transport Node"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["miden", "messaging"]
+license.workspace      = true
+name                   = "miden-private-transport-node"
+readme.workspace       = true
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lints]
+workspace = true
+
+[features]
+
+[dependencies]
+anyhow                  = { workspace = true }
+clap                    = { workspace = true }
+miden-private-transport = { workspace = true }
+tokio                   = { workspace = true }
+tracing                 = { workspace = true }

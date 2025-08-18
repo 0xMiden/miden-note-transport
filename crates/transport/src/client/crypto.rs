@@ -1,18 +1,17 @@
-use crate::{Error, Result};
 use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, KeyInit},
 };
 use rand::{Rng, RngCore};
 
+use crate::{Error, Result};
+
 /// Encrypt data using AES-GCM with a random nonce
 /// For PoC purposes, we use a simple symmetric encryption scheme
 /// In production, this would be replaced with proper asymmetric encryption
 pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
     if key.len() != 32 {
-        return Err(Error::Encryption(
-            "Key must be 32 bytes for AES-256".to_string(),
-        ));
+        return Err(Error::Encryption("Key must be 32 bytes for AES-256".to_string()));
     }
 
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
@@ -34,9 +33,7 @@ pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
 /// Decrypt data using AES-GCM
 pub fn decrypt(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
     if key.len() != 32 {
-        return Err(Error::Decryption(
-            "Key must be 32 bytes for AES-256".to_string(),
-        ));
+        return Err(Error::Decryption("Key must be 32 bytes for AES-256".to_string()));
     }
 
     if encrypted_data.len() < 12 {

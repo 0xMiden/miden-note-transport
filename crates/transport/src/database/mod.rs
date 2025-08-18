@@ -1,11 +1,12 @@
 mod sqlite;
 
+use chrono::{DateTime, Utc};
+
 use self::sqlite::SQLiteDB;
 use crate::{
     Result,
     types::{NoteId, NoteTag, StoredNote},
 };
-use chrono::{DateTime, Utc};
 
 /// Database operations
 #[async_trait::async_trait]
@@ -61,9 +62,7 @@ impl Database {
     /// Connect to a database with SQLite backend
     pub async fn connect(config: DatabaseConfig) -> Result<Self> {
         let backend = SQLiteDB::connect(config).await?;
-        Ok(Self {
-            backend: Box::new(backend),
-        })
+        Ok(Self { backend: Box::new(backend) })
     }
 
     /// Store a new note
@@ -98,9 +97,10 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
     use crate::types::{TEST_TAG, test_note_header};
-    use chrono::Utc;
 
     #[tokio::test]
     async fn test_sqlite_database() {
@@ -148,19 +148,13 @@ mod tests {
 
         // Fetch notes with timestamp before the note was received - should return the note
         let before_timestamp = received_time - chrono::Duration::seconds(1);
-        let fetched_notes = db
-            .fetch_notes(TEST_TAG.into(), before_timestamp)
-            .await
-            .unwrap();
+        let fetched_notes = db.fetch_notes(TEST_TAG.into(), before_timestamp).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
         // Fetch notes with timestamp after the note was received - should return empty
         let after_timestamp = received_time + chrono::Duration::seconds(1);
-        let fetched_notes = db
-            .fetch_notes(TEST_TAG.into(), after_timestamp)
-            .await
-            .unwrap();
+        let fetched_notes = db.fetch_notes(TEST_TAG.into(), after_timestamp).await.unwrap();
         assert_eq!(fetched_notes.len(), 0);
     }
 }

@@ -1,11 +1,12 @@
-use miden_transport::{
+use std::time::Duration;
+
+use miden_private_transport::{
     Node, NodeConfig,
     client::{FilesystemEncryptionStore, TransportLayerClient, grpc::GrpcClient},
     node::grpc::GrpcServerConfig,
     types::{NoteStatus, mock_note_p2id},
 };
 use serial_test::serial;
-use std::time::Duration;
 use tokio::time::sleep;
 
 #[tokio::test]
@@ -16,10 +17,7 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("http://127.0.0.1:{port}");
 
     let config = NodeConfig {
-        grpc: GrpcServerConfig {
-            port,
-            ..Default::default()
-        },
+        grpc: GrpcServerConfig { port, ..Default::default() },
         ..Default::default()
     };
 
@@ -32,7 +30,7 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let encryption_store = Box::new(FilesystemEncryptionStore::new("/tmp")?);
     let mut client = TransportLayerClient::new(grpc_client, encryption_store);
     // TODO make use of EncryptionStore
-    let key = miden_transport::client::crypto::generate_key();
+    let key = miden_private_transport::client::crypto::generate_key();
 
     // Send a note
     let note = mock_note_p2id();

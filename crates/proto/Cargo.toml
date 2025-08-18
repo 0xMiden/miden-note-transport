@@ -1,14 +1,21 @@
 [package]
-name = "miden-transport-proto"
-version = "0.1.0"
-edition = "2021"
+authors.workspace      = true
+description            = "Miden Private Notes Transport Protocol Buffers"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["miden", "proto"]
+license.workspace      = true
+name                   = "miden-private-transport-proto"
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
 
 [dependencies]
 # Protobuf
-prost = "0.14"
-prost-types = "0.14"
-tonic = "0.14"
-tonic-prost = "0.14"
+prost = "0.13"
+prost-types = "0.13"
+tonic.workspace = true
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -17,4 +24,4 @@ chrono = { version = "0.4", features = ["serde"] }
 miden-objects = { version = "0.10", features = ["testing"] }
 
 [build-dependencies]
-tonic-prost-build = "0.14" 
+tonic-build = "0.13"

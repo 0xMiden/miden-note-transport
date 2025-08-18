@@ -1,14 +1,16 @@
-use crate::{Result, database::Database};
+use std::{net::SocketAddr, sync::Arc};
+
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
-use miden_transport_proto::miden_transport::miden_transport_server::MidenTransportServer;
-use miden_transport_proto::miden_transport::{
+use miden_private_transport_proto::miden_transport::{
     EncryptedNoteTimestamped, FetchNotesRequest, FetchNotesResponse, HealthResponse,
     NoteStatus as ProtoNoteStatus, SendNoteRequest, SendNoteResponse, StatsResponse,
+    miden_transport_server::MidenTransportServer,
 };
 use prost_types;
-use std::{net::SocketAddr, sync::Arc};
 use tonic::{Request, Response, Status};
+
+use crate::{Result, database::Database};
 
 pub struct GrpcServer {
     database: Arc<Database>,
@@ -55,16 +57,16 @@ impl GrpcServer {
 }
 
 #[tonic::async_trait]
-impl miden_transport_proto::miden_transport::miden_transport_server::MidenTransport for GrpcServer {
+impl miden_private_transport_proto::miden_transport::miden_transport_server::MidenTransport
+    for GrpcServer
+{
     async fn send_note(
         &self,
         request: Request<SendNoteRequest>,
     ) -> std::result::Result<Response<SendNoteResponse>, Status> {
         let request = request.into_inner();
 
-        let note = request
-            .note
-            .ok_or_else(|| Status::invalid_argument("Missing note"))?;
+        let note = request.note.ok_or_else(|| Status::invalid_argument("Missing note"))?;
 
         // Validate note size
         if note.encrypted_details.len() > self.config.max_note_size {

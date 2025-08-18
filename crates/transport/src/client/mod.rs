@@ -1,8 +1,9 @@
+use miden_objects::utils::{Deserializable, Serializable};
+
 use crate::{
     Error, Result,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
-use miden_objects::utils::{Deserializable, Serializable};
 
 pub mod crypto;
 pub mod grpc;
@@ -81,10 +82,7 @@ impl TransportLayerClient {
         transport_client: Box<dyn TransportClient>,
         encryption_store: Box<dyn EncryptionStore>,
     ) -> Self {
-        Self {
-            transport_client,
-            encryption_store,
-        }
+        Self { transport_client, encryption_store }
     }
 
     /// Send a note to a recipient
@@ -96,9 +94,7 @@ impl TransportLayerClient {
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();
-        let encrypted = self
-            .encryption_store
-            .encrypt(&details_bytes, recipient_pub_key)?;
+        let encrypted = self.encryption_store.encrypt(&details_bytes, recipient_pub_key)?;
         self.transport_client.send_note(header, encrypted).await
     }
 
@@ -112,20 +108,17 @@ impl TransportLayerClient {
         let mut decrypted_notes = Vec::new();
 
         for info in infos {
-            match self
-                .encryption_store
-                .decrypt(pub_enc_key, &info.encrypted_data)
-            {
+            match self.encryption_store.decrypt(pub_enc_key, &info.encrypted_data) {
                 Ok(decrypted) => {
                     let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
                         Error::Decryption(format!("Failed to deserialized decrypted details: {e}"))
                     })?;
                     decrypted_notes.push((info.header, details))
-                }
+                },
                 Err(_) => {
                     // Skip notes that can't be decrypted with this key
                     continue;
-                }
+                },
             }
         }
 

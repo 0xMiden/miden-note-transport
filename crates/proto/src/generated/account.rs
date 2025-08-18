@@ -3,7 +3,7 @@
 ///
 /// A Miden account ID is a 120-bit value derived from the commitments to account code and storage,
 /// and a random user-provided seed.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccountId {
     /// 15 bytes (120 bits) encoded using \[winter_utils::Serializable\] implementation for
     /// \[miden_objects::account::account_id::AccountId\].
@@ -11,7 +11,7 @@ pub struct AccountId {
     pub id: ::prost::alloc::vec::Vec<u8>,
 }
 /// The state of an account at a specific block height.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccountSummary {
     /// The account ID.
     #[prost(message, optional, tag = "1")]
@@ -24,7 +24,7 @@ pub struct AccountSummary {
     pub block_num: u32,
 }
 /// An account details.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccountDetails {
     /// Account summary.
     #[prost(message, optional, tag = "1")]
@@ -35,7 +35,7 @@ pub struct AccountDetails {
     pub details: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
 }
 /// An account header.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct AccountHeader {
     /// Vault root hash.
     #[prost(message, optional, tag = "1")]
@@ -58,7 +58,8 @@ pub struct AccountWitness {
     pub account_id: ::core::option::Option<AccountId>,
     /// The account ID within the proof, which may be different from the above account ID.
     /// This can happen when the requested account ID's prefix matches the prefix of an existing
-    /// account ID in the tree. Then the witness will prove inclusion of this witness ID in the tree.
+    /// account ID in the tree. Then the witness will prove inclusion of this witness ID in the
+    /// tree.
     #[prost(message, optional, tag = "2")]
     pub witness_id: ::core::option::Option<AccountId>,
     /// The state commitment whose inclusion the witness proves.

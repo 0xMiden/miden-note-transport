@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
+use tracing::{error, info};
+
 use self::grpc::{GrpcServer, GrpcServerConfig};
 use crate::{
     Result,
     database::{Database, DatabaseConfig},
 };
-use std::sync::Arc;
-use tracing::{error, info};
 
 pub mod grpc;
 
@@ -29,10 +31,7 @@ impl Node {
 
         let grpc = GrpcServer::new(database.clone(), config.grpc);
 
-        Ok(Self {
-            grpc,
-            _database: database,
-        })
+        Ok(Self { grpc, _database: database })
     }
 
     pub async fn entrypoint(self) {

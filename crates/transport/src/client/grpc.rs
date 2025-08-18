@@ -1,6 +1,11 @@
-use miden_objects::utils::{Deserializable, Serializable};
-use prost_types;
 use std::time::Duration;
+
+use chrono::{DateTime, Utc};
+use miden_objects::utils::{Deserializable, Serializable};
+use miden_private_transport_proto::miden_transport::{
+    EncryptedNote, FetchNotesRequest, SendNoteRequest, miden_transport_client::MidenTransportClient,
+};
+use prost_types;
 use tonic::{
     Request,
     transport::{Channel, ClientTlsConfig},
@@ -11,10 +16,6 @@ use crate::{
     Error, Result,
     types::{NoteHeader, NoteId, NoteInfo, NoteTag},
 };
-use chrono::{DateTime, Utc};
-
-use miden_transport_proto::miden_transport::miden_transport_client::MidenTransportClient;
-use miden_transport_proto::miden_transport::{EncryptedNote, FetchNotesRequest, SendNoteRequest};
 
 pub struct GrpcClient {
     client: MidenTransportClient<Timeout<Channel>>,

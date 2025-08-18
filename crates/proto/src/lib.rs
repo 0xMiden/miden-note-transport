@@ -5,15 +5,10 @@ pub mod generated {
     pub mod primitives;
 }
 
-pub use generated::account;
-pub use generated::miden_transport;
-pub use generated::note;
-pub use generated::primitives;
-
-// Re-export main types
-pub use miden_transport::*;
-
 // Re-export miden-node types
 pub use account::*;
+pub use generated::{account, miden_transport, note, primitives};
+// Re-export main types
+pub use miden_transport::*;
 pub use note::*;
 pub use primitives::*;

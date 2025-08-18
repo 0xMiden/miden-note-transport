@@ -4,14 +4,13 @@ use miden_objects::{
     account::{AccountBuilder, AccountStorageMode},
     crypto::rand::RpoRandomCoin,
 };
-use miden_testing::Auth;
-use serde::{Deserialize, Serialize};
-
 // Use miden-objects
 pub use miden_objects::{
     block::BlockNumber,
     note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
 };
+use miden_testing::Auth;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NoteStatus {
@@ -64,10 +63,7 @@ pub struct StatsResponse {
 /// Statistics for a specific tag
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TagStats {
-    #[serde(
-        serialize_with = "serialize_note_tag",
-        deserialize_with = "deserialize_note_tag"
-    )]
+    #[serde(serialize_with = "serialize_note_tag", deserialize_with = "deserialize_note_tag")]
     pub tag: NoteTag,
     pub note_count: u64,
     pub last_activity: Option<DateTime<Utc>>,
@@ -108,9 +104,7 @@ where
     use serde::de::Error;
     let bytes = Vec::<u8>::deserialize(deserializer)?;
     NoteHeader::read_from_bytes(&bytes).map_err(|e| {
-        D::Error::custom(format!(
-            "Failed to deserialize NoteHeader from bytes: {e:?}"
-        ))
+        D::Error::custom(format!("Failed to deserialize NoteHeader from bytes: {e:?}"))
     })
 }
 

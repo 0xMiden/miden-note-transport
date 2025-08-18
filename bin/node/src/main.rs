@@ -1,6 +1,9 @@
 use clap::Parser;
 use miden_private_transport::{
-    Node, NodeConfig, Result, database::DatabaseConfig, node::grpc::GrpcServerConfig,
+    Node, NodeConfig, Result,
+    database::DatabaseConfig,
+    logging::{OpenTelemetry, setup_tracing},
+    node::grpc::GrpcServerConfig,
 };
 use tracing::info;
 
@@ -39,8 +42,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    setup_tracing(OpenTelemetry::Enabled)?;
 
     // Parse command line arguments
     let args = Args::parse();

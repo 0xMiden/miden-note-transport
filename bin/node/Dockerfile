@@ -48,5 +48,4 @@ LABEL org.opencontainers.image.created=$CREATED \
 EXPOSE 8080
 
 # Start
-# TODO(template) update for the binary
-CMD miden-mybinary
+CMD miden-private-transport-node

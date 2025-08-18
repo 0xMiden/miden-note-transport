@@ -1,11 +1,12 @@
+use chrono::{DateTime, Utc};
+use miden_objects::utils::{Deserializable, Serializable};
+use sqlx::{Row, SqlitePool};
+
 use crate::{
     Error, Result,
     database::{DatabaseBackend, DatabaseConfig},
     types::{NoteHeader, NoteId, NoteTag, StoredNote},
 };
-use chrono::{DateTime, Utc};
-use miden_objects::utils::{Deserializable, Serializable};
-use sqlx::{Row, SqlitePool};
 
 /// SQLite implementation of the database backend
 pub struct SQLiteDB {
@@ -143,9 +144,8 @@ impl DatabaseBackend for SQLiteDB {
     }
 
     async fn get_stats(&self) -> Result<(u64, u64)> {
-        let total_notes: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM notes")
-            .fetch_one(&self.pool)
-            .await?;
+        let total_notes: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM notes").fetch_one(&self.pool).await?;
 
         let total_tags: i64 = sqlx::query_scalar("SELECT COUNT(DISTINCT tag) FROM notes")
             .fetch_one(&self.pool)
