@@ -106,8 +106,13 @@ impl miden_private_transport_proto::miden_transport::miden_transport_server::Mid
 
         // Default to epoch start (1970-01-01) to fetch all notes if no timestamp provided
         let timestamp = if let Some(ts) = request.timestamp {
-            DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
-                .ok_or_else(|| Status::invalid_argument("Invalid timestamp"))?
+            DateTime::from_timestamp(
+                ts.seconds,
+                ts.nanos.try_into().map_err(|_| {
+                    Status::invalid_argument("Negative timestamp nanoseconds".to_string())
+                })?,
+            )
+            .ok_or_else(|| Status::invalid_argument("Invalid timestamp"))?
         } else {
             DateTime::from_timestamp(0, 0).unwrap()
         };
@@ -120,17 +125,26 @@ impl miden_private_transport_proto::miden_transport::miden_transport_server::Mid
             .map_err(|e| Status::internal(format!("Failed to fetch notes: {e:?}")))?;
 
         // Convert to protobuf format
-        let proto_notes = notes
+        let proto_notes: std::result::Result<Vec<_>, Status> = notes
             .into_iter()
-            .map(|note| EncryptedNoteTimestamped {
-                header: note.header.to_bytes(),
-                encrypted_details: note.encrypted_data,
-                timestamp: Some(prost_types::Timestamp {
-                    seconds: note.received_at.timestamp(),
-                    nanos: note.received_at.timestamp_subsec_nanos() as i32,
-                }),
+            .map(|note| {
+                let nanos = note.received_at.timestamp_subsec_nanos();
+                let nanos_i32 = nanos
+                    .try_into()
+                    .map_err(|_| Status::internal("Timestamp nanoseconds too large".to_string()))?;
+
+                Ok(EncryptedNoteTimestamped {
+                    header: note.header.to_bytes(),
+                    encrypted_details: note.encrypted_data,
+                    timestamp: Some(prost_types::Timestamp {
+                        seconds: note.received_at.timestamp(),
+                        nanos: nanos_i32,
+                    }),
+                })
             })
             .collect();
+
+        let proto_notes = proto_notes?;
 
         Ok(Response::new(FetchNotesResponse { notes: proto_notes }))
     }
@@ -139,11 +153,16 @@ impl miden_private_transport_proto::miden_transport::miden_transport_server::Mid
         &self,
         _request: Request<()>,
     ) -> std::result::Result<Response<HealthResponse>, Status> {
+        let nanos = Utc::now().timestamp_subsec_nanos();
+        let nanos_i32 = nanos
+            .try_into()
+            .map_err(|_| Status::internal("Timestamp nanoseconds too large".to_string()))?;
+
         Ok(Response::new(HealthResponse {
             status: "healthy".to_string(),
             timestamp: Some(prost_types::Timestamp {
                 seconds: Utc::now().timestamp(),
-                nanos: Utc::now().timestamp_subsec_nanos() as i32,
+                nanos: nanos_i32,
             }),
             version: env!("CARGO_PKG_VERSION").to_string(),
         }))

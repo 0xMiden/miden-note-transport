@@ -68,13 +68,16 @@ impl GrpcClient {
     }
 
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>> {
-        let request = FetchNotesRequest {
-            tag: tag.as_u32(),
-            timestamp: Some(prost_types::Timestamp {
-                seconds: self.lts.timestamp(),
-                nanos: self.lts.timestamp_subsec_nanos() as i32,
-            }),
-        };
+        let request =
+            FetchNotesRequest {
+                tag: tag.as_u32(),
+                timestamp: Some(prost_types::Timestamp {
+                    seconds: self.lts.timestamp(),
+                    nanos: self.lts.timestamp_subsec_nanos().try_into().map_err(|_| {
+                        Error::Internal("Timestamp nanoseconds too large".to_string())
+                    })?,
+                }),
+            };
 
         let response = self
             .client
@@ -95,8 +98,13 @@ impl GrpcClient {
 
             // Convert protobuf timestamp to DateTime
             let received_at = if let Some(timestamp) = note.timestamp {
-                chrono::DateTime::from_timestamp(timestamp.seconds, timestamp.nanos as u32)
-                    .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?
+                chrono::DateTime::from_timestamp(
+                    timestamp.seconds,
+                    timestamp.nanos.try_into().map_err(|_| {
+                        Error::Internal("Negative timestamp nanoseconds".to_string())
+                    })?,
+                )
+                .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?
             } else {
                 Utc::now() // Fallback to current time if timestamp is missing
             };
@@ -132,8 +140,14 @@ impl GrpcClient {
             .timestamp
             .ok_or_else(|| Error::Internal("Missing timestamp".to_string()))?;
 
-        let timestamp = chrono::DateTime::from_timestamp(timestamp.seconds, timestamp.nanos as u32)
-            .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?;
+        let timestamp = chrono::DateTime::from_timestamp(
+            timestamp.seconds,
+            timestamp
+                .nanos
+                .try_into()
+                .map_err(|_| Error::Internal("Negative nanoseconds".to_string()))?,
+        )
+        .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))?;
 
         Ok(crate::types::HealthResponse {
             status: response.status,
@@ -158,8 +172,13 @@ impl GrpcClient {
                 let last_activity = tag_stats
                     .last_activity
                     .map(|ts| {
-                        chrono::DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
-                            .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))
+                        chrono::DateTime::from_timestamp(
+                            ts.seconds,
+                            ts.nanos
+                                .try_into()
+                                .map_err(|_| Error::Internal("Negative nanoseconds".to_string()))?,
+                        )
+                        .ok_or_else(|| Error::Internal("Invalid timestamp".to_string()))
                     })
                     .transpose()?;
 

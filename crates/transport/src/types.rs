@@ -1,13 +1,14 @@
 use chrono::{DateTime, Utc};
 use miden_lib::{account::wallets::BasicWallet, note::create_p2id_note};
+// Use miden-objects
+pub use miden_objects::{
+    Felt,
+    block::BlockNumber,
+    note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
+};
 use miden_objects::{
     account::{AccountBuilder, AccountStorageMode},
     crypto::rand::RpoRandomCoin,
-};
-// Use miden-objects
-pub use miden_objects::{
-    block::BlockNumber,
-    note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
 };
 use miden_testing::Auth;
 use serde::{Deserialize, Serialize};
@@ -69,6 +70,7 @@ pub struct TagStats {
     pub last_activity: Option<DateTime<Utc>>,
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn serialize_note_tag<S>(tag: &NoteTag, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -84,7 +86,7 @@ where
 
     let s = String::deserialize(deserializer)?;
     u32::from_str_radix(&s, 16)
-        .map(|uint| uint.into())
+        .map(std::convert::Into::into)
         .map_err(|e| D::Error::custom(format!("Failed to parse NoteTag for u32: {e:?}")))
 }
 
@@ -133,7 +135,7 @@ pub fn random_note_id() -> NoteId {
     NoteId::new(recipient, asset_commitment)
 }
 
-pub const TEST_TAG: u32 = 3221225472;
+pub const TEST_TAG: u32 = 3_221_225_472;
 pub fn test_note_header() -> NoteHeader {
     use miden_objects::{
         Felt,
@@ -169,7 +171,7 @@ pub fn mock_note_p2id() -> miden_objects::note::Note {
         account.id(),
         vec![],
         NoteType::Private,
-        Default::default(),
+        Felt::default(),
         &mut rng,
     )
     .unwrap()

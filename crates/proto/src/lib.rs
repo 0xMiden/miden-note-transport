@@ -1,3 +1,4 @@
+#[allow(clippy::all, clippy::pedantic, clippy::restriction, clippy::nursery)]
 pub mod generated {
     pub mod account;
     pub mod miden_transport;

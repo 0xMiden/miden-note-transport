@@ -3,7 +3,7 @@ authors.workspace      = true
 description            = "Miden Private Transport Client CLI"
 edition.workspace      = true
 homepage.workspace     = true
-keywords               = ["miden", "messaging"]
+keywords               = ["messaging", "miden"]
 license.workspace      = true
 name                   = "miden-private-transport-cli"
 readme.workspace       = true
@@ -17,7 +17,6 @@ workspace = true
 [features]
 
 [dependencies]
-anyhow                  = { workspace = true }
 base64                  = { workspace = true }
 clap                    = { workspace = true }
 miden-objects           = { workspace = true }

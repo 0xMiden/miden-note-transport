@@ -1,10 +1,5 @@
 [workspace]
-members = [
-    "bin/cli",
-    "bin/node",
-    "crates/proto",
-    "crates/transport",
-]
+members  = ["bin/cli", "bin/node", "crates/proto", "crates/transport"]
 resolver = "2"
 
 [workspace.package]
@@ -20,18 +15,18 @@ version      = "0.1.0"
 
 [workspace.dependencies]
 # Workspace crates (path-based dependencies)
-miden-private-transport-proto = { path = "crates/proto", version = "0.1" }
 miden-private-transport       = { path = "crates/transport", version = "0.1" }
+miden-private-transport-proto = { path = "crates/proto", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
 
 # Other miden dependencies. These should align with those expected by miden-base.
-miden-objects = { version = "0.10", features = ["testing"] }
+miden-objects = { features = ["testing"], version = "0.10" }
 
 # External dependencies
 anyhow             = { version = "1.0" }
 base64             = { version = "0.22" }
-clap               = { version = "4.5", features = ["derive"] }
+clap               = { features = ["derive"], version = "4.5" }
 thiserror          = { default-features = false, version = "2.0" }
 tokio              = { version = "1.46" }
 tonic              = { version = "0.13" }

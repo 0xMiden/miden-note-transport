@@ -3,13 +3,16 @@ authors.workspace      = true
 description            = "Miden Private Notes Transport"
 edition.workspace      = true
 homepage.workspace     = true
-keywords               = ["miden", "messaging"]
+keywords               = ["messaging", "miden"]
 license.workspace      = true
 name                   = "miden-private-transport"
 readme                 = "README.md"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
+
+[lints]
+workspace = true
 
 [lib]
 path = "src/lib.rs"
@@ -27,7 +30,6 @@ path = "src/bin/cli.rs"
 miden-private-transport-proto.workspace = true
 
 # Miden
-miden-crypto  = "0.15"
 miden-lib     = "0.10"
 miden-objects = { workspace = true }
 miden-testing = "0.10"
@@ -35,24 +37,24 @@ miden-testing = "0.10"
 # gRPC server and client
 tokio = { workspace = true }
 tonic = { workspace = true }
-tower = { version = "0.5", features = ["timeout"] }
+tower = { features = ["timeout"], version = "0.5" }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
+serde      = { features = ["derive"], version = "1.0" }
 serde_json = "1.0"
 
 # Protobuf
 prost-types = "0.13"
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
 
 # Encryption
 aes-gcm = "0.10"
-rand = "0.9"
+rand    = "0.9"
 
 # CLI
-clap = { version = "4.5", features = ["derive"] }
+clap = { features = ["derive"], version = "4.5" }
 
 # Logging
 opentelemetry         = { version = "0.30" }
@@ -63,17 +65,14 @@ tracing-opentelemetry = { version = "0.31" }
 tracing-subscriber    = { workspace = true }
 
 # Error handling
-anyhow = "1.0"
+anyhow    = "1.0"
 thiserror = "2.0"
 
 # Async traits
 async-trait = "0.1"
 
 # Time handling
-chrono = { version = "0.4", features = ["serde"] }
-
-# User identity
-uuid = { version = "1.17.0", features = ["v4"] }
+chrono = { features = ["serde"], version = "0.4" }
 
 # Base64 encoding/decoding
 base64 = "0.22"

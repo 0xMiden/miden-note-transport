@@ -108,17 +108,14 @@ impl TransportLayerClient {
         let mut decrypted_notes = Vec::new();
 
         for info in infos {
-            match self.encryption_store.decrypt(pub_enc_key, &info.encrypted_data) {
-                Ok(decrypted) => {
-                    let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
-                        Error::Decryption(format!("Failed to deserialized decrypted details: {e}"))
-                    })?;
-                    decrypted_notes.push((info.header, details))
-                },
-                Err(_) => {
-                    // Skip notes that can't be decrypted with this key
-                    continue;
-                },
+            if let Ok(decrypted) = self.encryption_store.decrypt(pub_enc_key, &info.encrypted_data)
+            {
+                let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
+                    Error::Decryption(format!("Failed to deserialized decrypted details: {e}"))
+                })?;
+                decrypted_notes.push((info.header, details));
+            } else {
+                // Skip notes that can't be decrypted with this key
             }
         }
 

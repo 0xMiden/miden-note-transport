@@ -7,7 +7,7 @@ use rand::{Rng, RngCore};
 use crate::{Error, Result};
 
 /// Encrypt data using AES-GCM with a random nonce
-/// For PoC purposes, we use a simple symmetric encryption scheme
+/// For `PoC` purposes, we use a simple symmetric encryption scheme
 /// In production, this would be replaced with proper asymmetric encryption
 pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
     if key.len() != 32 {

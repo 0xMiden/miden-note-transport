@@ -11,17 +11,13 @@ repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
+[lints]
+workspace = true
+
 [dependencies]
-# Protobuf
-prost = "0.13"
-prost-types = "0.13"
+prost           = "0.13"
+prost-types     = "0.13"
 tonic.workspace = true
-
-# Time handling
-chrono = { version = "0.4", features = ["serde"] }
-
-# Miden objects for conversions
-miden-objects = { version = "0.10", features = ["testing"] }
 
 [build-dependencies]
 tonic-build = "0.13"

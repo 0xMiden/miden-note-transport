@@ -96,10 +96,10 @@ async fn main() -> Result<()> {
             generate_tag();
         },
         Commands::Health => {
-            health_check(&client).await?;
+            health_check(&client);
         },
         Commands::Stats => {
-            get_stats(&client).await?;
+            get_stats(&client);
         },
     }
 
@@ -177,24 +177,20 @@ fn generate_tag() {
     println!("Generated note tag: {tag}");
 }
 
-async fn health_check(_client: &TransportLayerClient) -> Result<()> {
+fn health_check(_client: &TransportLayerClient) {
     info!("Checking node health");
 
     // For now, we'll need to access the API client directly
     // This is a limitation of the current TransportLayerClient design
     println!("❌ Health check not implemented in TransportLayerClient");
     println!("Use GrpcClient directly for health checks");
-
-    Ok(())
 }
 
-async fn get_stats(_client: &TransportLayerClient) -> Result<()> {
+fn get_stats(_client: &TransportLayerClient) {
     info!("Getting node statistics");
 
     // For now, we'll need to access the API client directly
     // This is a limitation of the current TransportLayerClient design
     println!("❌ Stats not implemented in TransportLayerClient");
     println!("Use GrpcClient directly for statistics");
-
-    Ok(())
 }
