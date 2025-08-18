@@ -1,7 +1,9 @@
+mod maintenance;
 mod sqlite;
 
 use chrono::{DateTime, Utc};
 
+pub use self::maintenance::DatabaseMaintenance;
 use self::sqlite::SQLiteDB;
 use crate::{
     Result,
@@ -59,7 +61,7 @@ impl Default for DatabaseConfig {
 }
 
 impl Database {
-    /// Connect to a database with `SQLite` backend
+    /// Connect to a database (with `SQLite` backend)
     pub async fn connect(config: DatabaseConfig) -> Result<Self> {
         let backend = SQLiteDB::connect(config).await?;
         Ok(Self { backend: Box::new(backend) })
