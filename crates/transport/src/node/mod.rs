@@ -5,7 +5,7 @@ use tracing::{error, info};
 use self::grpc::{GrpcServer, GrpcServerConfig};
 use crate::{
     Result,
-    database::{Database, DatabaseConfig},
+    database::{Database, DatabaseConfig, DatabaseMaintenance},
 };
 
 pub mod grpc;
@@ -14,8 +14,10 @@ pub mod grpc;
 pub struct Node {
     /// Serve client requests
     grpc: GrpcServer,
+    /// Database maintenance
+    maintenance: DatabaseMaintenance,
 
-    // To be used in other services, .e.g. P2P, DB maintenance
+    // To be used in other services, .e.g. P2P
     _database: Arc<Database>,
 }
 
@@ -27,15 +29,17 @@ pub struct NodeConfig {
 
 impl Node {
     pub async fn init(config: NodeConfig) -> Result<Self> {
-        let database = Arc::new(Database::connect(config.database).await?);
+        let database = Arc::new(Database::connect(config.database.clone()).await?);
 
         let grpc = GrpcServer::new(database.clone(), config.grpc);
+        let maintenance = DatabaseMaintenance::new(database.clone(), config.database);
 
-        Ok(Self { grpc, _database: database })
+        Ok(Self { grpc, maintenance, _database: database })
     }
 
     pub async fn entrypoint(self) {
         info!("Starting Miden Transport Node");
+        tokio::spawn(self.maintenance.entrypoint());
         if let Err(e) = self.grpc.serve().await {
             error!("Server error: {e}");
         }
