@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
-use miden_private_transport_proto::miden_transport::{
-    EncryptedNote, FetchNotesRequest, SendNoteRequest, miden_transport_client::MidenTransportClient,
+use miden_private_transport_proto::miden_private_transport::{
+    EncryptedNote, FetchNotesRequest, SendNoteRequest,
+    miden_private_transport_client::MidenPrivateTransportClient,
 };
 use prost_types;
 use tonic::{
@@ -18,7 +19,7 @@ use crate::{
 };
 
 pub struct GrpcClient {
-    client: MidenTransportClient<Timeout<Channel>>,
+    client: MidenPrivateTransportClient<Timeout<Channel>>,
     // Last fetched timestamp
     lts: DateTime<Utc>,
 }
@@ -33,7 +34,7 @@ impl GrpcClient {
             .await?;
         let timeout = Duration::from_millis(timeout_ms);
         let timeout_channel = Timeout::new(channel, timeout);
-        let client = MidenTransportClient::new(timeout_channel);
+        let client = MidenPrivateTransportClient::new(timeout_channel);
         let lts = DateTime::from_timestamp(0, 0).unwrap();
 
         Ok(Self { client, lts })

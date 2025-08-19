@@ -2,10 +2,10 @@ use std::{net::SocketAddr, sync::Arc};
 
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
-use miden_private_transport_proto::miden_transport::{
+use miden_private_transport_proto::miden_private_transport::{
     EncryptedNoteTimestamped, FetchNotesRequest, FetchNotesResponse, HealthResponse,
     NoteStatus as ProtoNoteStatus, SendNoteRequest, SendNoteResponse, StatsResponse,
-    miden_transport_server::MidenTransportServer,
+    miden_private_transport_server::MidenPrivateTransportServer,
 };
 use prost_types;
 use tonic::{Request, Response, Status};
@@ -39,8 +39,8 @@ impl GrpcServer {
         Self { database, config }
     }
 
-    pub fn into_service(self) -> MidenTransportServer<Self> {
-        MidenTransportServer::new(self)
+    pub fn into_service(self) -> MidenPrivateTransportServer<Self> {
+        MidenPrivateTransportServer::new(self)
     }
 
     pub async fn serve(self) -> Result<()> {
@@ -57,7 +57,7 @@ impl GrpcServer {
 }
 
 #[tonic::async_trait]
-impl miden_private_transport_proto::miden_transport::miden_transport_server::MidenTransport
+impl miden_private_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
     for GrpcServer
 {
     async fn send_note(
