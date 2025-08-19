@@ -33,19 +33,11 @@ impl DatabaseMaintenance {
     }
 
     async fn step(&mut self) -> Result<()> {
-        tokio::select! {
-            _ = self.cleanup_old_notes() => {
-                info!("Cleaned up old notes");
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn cleanup_old_notes(&self) -> Result<()> {
-        // Trigger cleanup every 10 minutes
         self.database.cleanup_old_notes(self.config.retention_days).await?;
+        info!("Cleaned up old notes");
+
         sleep(Duration::from_secs(600)).await;
+
         Ok(())
     }
 
