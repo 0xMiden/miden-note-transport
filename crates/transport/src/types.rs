@@ -159,20 +159,19 @@ pub fn test_note_header() -> NoteHeader {
 pub fn mock_note_p2id() -> miden_objects::note::Note {
     use rand::Rng;
     let mut rng = rand::rng();
-    let (account, _seed) = AccountBuilder::new(rng.random())
-        .storage_mode(AccountStorageMode::Public)
+    let (sender, _seed) = AccountBuilder::new(rng.random())
+        .storage_mode(AccountStorageMode::Private)
+        .with_component(BasicWallet)
+        .with_auth_component(Auth::BasicAuth)
+        .build()
+        .unwrap();
+    let (target, _seed) = AccountBuilder::new(rng.random())
+        .storage_mode(AccountStorageMode::Private)
         .with_component(BasicWallet)
         .with_auth_component(Auth::BasicAuth)
         .build()
         .unwrap();
     let mut rng = RpoRandomCoin::new(Default::default());
-    create_p2id_note(
-        account.id(),
-        account.id(),
-        vec![],
-        NoteType::Private,
-        Felt::default(),
-        &mut rng,
-    )
-    .unwrap()
+    create_p2id_note(sender.id(), target.id(), vec![], NoteType::Private, Felt::default(), &mut rng)
+        .unwrap()
 }

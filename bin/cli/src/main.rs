@@ -1,4 +1,3 @@
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use clap::{Parser, Subcommand};
 use miden_objects::{note::Note, utils::Deserializable};
 use miden_private_transport::{
@@ -22,10 +21,6 @@ struct Args {
     #[arg(long, default_value = "1000")]
     timeout: u64,
 
-    /// User ID
-    #[arg(long)]
-    user_id: Option<String>,
-
     #[command(subcommand)]
     command: Commands,
 }
@@ -34,13 +29,13 @@ struct Args {
 enum Commands {
     /// Send a note to a recipient
     Send {
-        /// Note data (base64 encoded)
+        /// Note data (hex encoded)
         #[arg(long)]
-        data: String,
+        note: String,
 
-        /// Recipient's public key (base64 encoded)
+        /// Recipient's public key
         #[arg(long)]
-        recipient_key: String,
+        key: String,
     },
 
     /// Fetch notes for a tag
@@ -49,22 +44,22 @@ enum Commands {
         #[arg(long)]
         tag: u32,
 
-        /// Recipient's private key (base64 encoded)
+        /// Recipient's private key
         #[arg(long)]
-        private_key: String,
+        key: String,
     },
 
     /// Generate a new encryption key
     GenerateKey,
-
-    /// Generate a new note tag
-    GenerateTag,
 
     /// Check node health
     Health,
 
     /// Get node statistics
     Stats,
+
+    /// Random note for testing purposes
+    TestNote,
 }
 
 #[tokio::main]
@@ -83,23 +78,23 @@ async fn main() -> Result<()> {
     let mut client = TransportLayerClient::new(Box::new(grpc), Box::new(encryption_store));
 
     match args.command {
-        Commands::Send { data, recipient_key } => {
-            send_note(&mut client, &data, &recipient_key).await?;
+        Commands::Send { note, key } => {
+            send_note(&mut client, &note, &key).await?;
         },
-        Commands::Fetch { tag, private_key } => {
-            fetch_notes(&mut client, tag, &private_key).await?;
+        Commands::Fetch { tag, key } => {
+            fetch_notes(&mut client, tag, &key).await?;
         },
         Commands::GenerateKey => {
             generate_key();
-        },
-        Commands::GenerateTag => {
-            generate_tag();
         },
         Commands::Health => {
             health_check(&client);
         },
         Commands::Stats => {
             get_stats(&client);
+        },
+        Commands::TestNote => {
+            mock_note();
         },
     }
 
@@ -111,16 +106,16 @@ async fn send_note(
     data: &str,
     recipient_key: &str,
 ) -> Result<()> {
-    let bytes = BASE64.decode(data).map_err(|e| {
-        miden_private_transport::Error::InvalidNoteData(format!("Invalid base64 data: {e}"))
+    let bytes = hex::decode(data).map_err(|e| {
+        miden_private_transport::Error::InvalidNoteData(format!("Invalid hex data: {e}"))
     })?;
 
     let note = Note::read_from_bytes(&bytes)
         .map_err(|e| Error::InvalidNoteData(format!("Failed to deserialize Note: {e}")))?;
 
-    // Decode base64 recipient key
-    let pub_key = BASE64.decode(recipient_key).map_err(|e| {
-        miden_private_transport::Error::InvalidNoteData(format!("Invalid base64 key: {e}"))
+    // Decode hex recipient key
+    let pub_key = hex::decode(recipient_key).map_err(|e| {
+        miden_private_transport::Error::InvalidNoteData(format!("Invalid hex key: {e}"))
     })?;
 
     // Validate key
@@ -142,9 +137,9 @@ async fn send_note(
 async fn fetch_notes(client: &mut TransportLayerClient, tag: u32, private_key: &str) -> Result<()> {
     info!("Fetching notes for tag {}", tag);
 
-    // Decode base64 private key
-    let key = BASE64.decode(private_key).map_err(|e| {
-        miden_private_transport::Error::InvalidNoteData(format!("Invalid base64 key: {e}"))
+    // Decode hex private key
+    let key = hex::decode(private_key).map_err(|e| {
+        miden_private_transport::Error::InvalidNoteData(format!("Invalid hex key: {e}"))
     })?;
 
     // Validate key
@@ -168,13 +163,8 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32, private_key: &
 
 fn generate_key() {
     let key = crypto::generate_key();
-    let base64_key = BASE64.encode(&key);
-    println!("Generated encryption key: {base64_key}");
-}
-
-fn generate_tag() {
-    let tag = crypto::generate_note_tag();
-    println!("Generated note tag: {tag}");
+    let hex_key = hex::encode(&key);
+    println!("Generated encryption key: {hex_key}");
 }
 
 fn health_check(_client: &TransportLayerClient) {
@@ -193,4 +183,11 @@ fn get_stats(_client: &TransportLayerClient) {
     // This is a limitation of the current TransportLayerClient design
     println!("❌ Stats not implemented in TransportLayerClient");
     println!("Use GrpcClient directly for statistics");
+}
+
+fn mock_note() {
+    use miden_objects::utils::Serializable;
+    let note = miden_private_transport::types::mock_note_p2id();
+    let hex_note = hex::encode(note.to_bytes());
+    info!("Test note: {}", hex_note);
 }
