@@ -1639,8 +1639,8 @@ dependencies = [
 name = "miden-private-transport-cli"
 version = "0.1.0"
 dependencies = [
- "base64",
  "clap",
+ "hex",
  "miden-objects",
  "miden-private-transport",
  "tokio",

@@ -17,8 +17,8 @@ workspace = true
 [features]
 
 [dependencies]
-base64                  = { workspace = true }
 clap                    = { workspace = true }
+hex                     = { workspace = true }
 miden-objects           = { workspace = true }
 miden-private-transport = { workspace = true }
 tokio                   = { workspace = true }
