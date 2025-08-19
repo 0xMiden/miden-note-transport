@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package miden_transport;
+package miden_private_transport;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
@@ -67,7 +67,7 @@ message TagStats {
 }
 
 // gRPC service definition
-service MidenTransport {
+service MidenPrivateTransport {
     // Send a note to the server
     rpc SendNote(SendNoteRequest) returns (SendNoteResponse);
     

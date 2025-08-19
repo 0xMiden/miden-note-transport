@@ -19,11 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .out_dir(generated_dir)
         .compile_protos(
-            &["../proto/transport.proto"],
+            &["../proto/miden-private-transport.proto"],
             &["../proto", "../proto/miden-node/proto/proto"],
         )?;
 
-    println!("cargo:rerun-if-changed=../proto/transport.proto");
+    println!("cargo:rerun-if-changed=../proto/miden-private-transport.proto");
     println!("cargo:rerun-if-changed=../proto/miden-node/proto/proto/types/note.proto");
     println!("cargo:rerun-if-changed=../proto/miden-node/proto/proto/types/account.proto");
     println!("cargo:rerun-if-changed=../proto/miden-node/proto/proto/types/primitives.proto");
