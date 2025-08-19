@@ -45,9 +45,6 @@ sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
 aes-gcm = "0.10"
 rand    = "0.9"
 
-# CLI
-clap = { features = ["derive"], version = "4.5" }
-
 # Logging
 opentelemetry         = { version = "0.30" }
 opentelemetry-otlp    = { default-features = false, features = ["grpc-tonic", "tls-roots", "trace"], version = "0.30" }
@@ -65,9 +62,6 @@ async-trait = "0.1"
 
 # Time handling
 chrono = { features = ["serde"], version = "0.4" }
-
-# Base64 encoding/decoding
-base64 = "0.22"
 
 [dev-dependencies]
 serial_test = "3.2"

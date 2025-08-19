@@ -6,20 +6,29 @@ use tracing::{error, info};
 use super::{Database, DatabaseConfig};
 use crate::Result;
 
+enum State {
+    Stopped,
+    Running,
+}
+
 /// Perform periodic maintenance of the database
 pub struct DatabaseMaintenance {
     database: Arc<Database>,
     config: DatabaseConfig,
+    state: State,
 }
 
 impl DatabaseMaintenance {
     pub fn new(database: Arc<Database>, config: DatabaseConfig) -> Self {
-        Self { database, config }
+        Self { database, config, state: State::Stopped }
     }
 
     pub async fn entrypoint(mut self) {
-        while let Err(e) = self.step().await {
-            error!("Server error: {e}");
+        self.state = State::Running;
+        while self.is_active() {
+            if let Err(e) = self.step().await {
+                error!("Database maintenance error: {e}");
+            }
         }
     }
 
@@ -38,6 +47,10 @@ impl DatabaseMaintenance {
         self.database.cleanup_old_notes(self.config.retention_days).await?;
         sleep(Duration::from_secs(600)).await;
         Ok(())
+    }
+
+    fn is_active(&self) -> bool {
+        matches!(self.state, State::Running)
     }
 }
 
