@@ -45,7 +45,7 @@ impl DatabaseMaintenance {
     async fn cleanup_old_notes(&self) -> Result<()> {
         // Trigger cleanup every 10 minutes
         self.database.cleanup_old_notes(self.config.retention_days).await?;
-        sleep(Duration::from_secs(10)).await;
+        sleep(Duration::from_secs(600)).await;
         Ok(())
     }
 
