@@ -17,14 +17,6 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
-[[bin]]
-name = "miden-transport-node"
-path = "src/bin/node.rs"
-
-[[bin]]
-name = "miden-transport-cli"
-path = "src/bin/cli.rs"
-
 [dependencies]
 # Proto crate
 miden-private-transport-proto.workspace = true
