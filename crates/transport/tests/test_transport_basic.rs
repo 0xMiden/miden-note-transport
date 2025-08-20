@@ -30,20 +30,20 @@ async fn test_transport_basic_note() -> Result<(), Box<dyn std::error::Error>> {
     let encryption_store = Box::new(FilesystemEncryptionStore::new("/tmp")?);
     let mut client = TransportLayerClient::new(grpc_client, encryption_store);
     // TODO make use of EncryptionStore
-    let key = miden_private_transport::client::crypto::generate_key();
+    let key = miden_private_transport::client::crypto::aes::Aes256GcmKey::generate();
 
     // Send a note
     let note = mock_note_p2id();
     let header = *note.header();
     let sent_tag = header.metadata().tag();
 
-    let send_response = client.send_note(note, &key).await?;
+    let send_response = client.send_note(note, key.as_bytes()).await?;
     let (id, status) = send_response;
     assert_eq!(id, header.id());
     assert_eq!(status, NoteStatus::Sent);
 
     // Fetch note back
-    let fetch_response = client.fetch_notes(sent_tag, &key).await?;
+    let fetch_response = client.fetch_notes(sent_tag, key.as_bytes()).await?;
     let infos = fetch_response;
     assert_eq!(infos.len(), 1);
     let (header, _details) = &infos[0];
