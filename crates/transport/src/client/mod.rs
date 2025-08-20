@@ -1,5 +1,9 @@
 use miden_objects::utils::{Deserializable, Serializable};
 
+use self::crypto::{
+    EncryptionScheme,
+    aes::{Aes256Gcm, Aes256GcmKey},
+};
 use crate::{
     Error, Result,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
@@ -62,12 +66,20 @@ impl FilesystemEncryptionStore {
 impl EncryptionStore for FilesystemEncryptionStore {
     fn decrypt(&self, pub_enc_key: &[u8], msg: &[u8]) -> Result<Vec<u8>> {
         // TODO use self/use stored key
-        crate::client::crypto::decrypt(msg, pub_enc_key)
+        let array: [u8; 32] = pub_enc_key
+            .try_into()
+            .map_err(|e| Error::Encryption(format!("Wrong key size: {e}")))?;
+        let key = Aes256GcmKey::new(array);
+        Aes256Gcm::decrypt(&key, msg)
     }
 
     fn encrypt(&self, data: &[u8], recipient_pub_key: &[u8]) -> Result<Vec<u8>> {
         // TODO use self/use stored key
-        crate::client::crypto::encrypt(data, recipient_pub_key)
+        let array: [u8; 32] = recipient_pub_key
+            .try_into()
+            .map_err(|e| Error::Encryption(format!("Wrong key size: {e}")))?;
+        let key = Aes256GcmKey::new(array);
+        Aes256Gcm::encrypt(&key, data)
     }
 }
 

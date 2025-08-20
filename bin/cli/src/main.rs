@@ -2,7 +2,10 @@ use clap::{Parser, Subcommand};
 use miden_objects::{note::Note, utils::Deserializable};
 use miden_private_transport::{
     Error, Result,
-    client::{FilesystemEncryptionStore, TransportLayerClient, crypto, grpc::GrpcClient},
+    client::{
+        FilesystemEncryptionStore, TransportLayerClient, crypto::aes::Aes256GcmKey,
+        grpc::GrpcClient,
+    },
     logging::{OpenTelemetry, setup_tracing},
 };
 use tracing::info;
@@ -118,13 +121,6 @@ async fn send_note(
         miden_private_transport::Error::InvalidNoteData(format!("Invalid hex key: {e}"))
     })?;
 
-    // Validate key
-    if !crypto::is_valid_encryption_key(&pub_key) {
-        return Err(miden_private_transport::Error::InvalidNoteData(
-            "Invalid encryption key format".to_string(),
-        ));
-    }
-
     info!("Sending note to tag {}", note.header().metadata().tag());
 
     // Send the note
@@ -142,13 +138,6 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32, private_key: &
         miden_private_transport::Error::InvalidNoteData(format!("Invalid hex key: {e}"))
     })?;
 
-    // Validate key
-    if !crypto::is_valid_encryption_key(&key) {
-        return Err(miden_private_transport::Error::InvalidNoteData(
-            "Invalid encryption key format".to_string(),
-        ));
-    }
-
     // Fetch notes
     let decrypted_notes = client.fetch_notes(tag.into(), &key).await?;
 
@@ -162,8 +151,8 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32, private_key: &
 }
 
 fn generate_key() {
-    let key = crypto::generate_key();
-    let hex_key = hex::encode(&key);
+    let key = Aes256GcmKey::generate();
+    let hex_key = hex::encode(key.as_bytes());
     println!("Generated encryption key: {hex_key}");
 }
 
