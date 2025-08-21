@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
@@ -22,7 +22,7 @@ use crate::{
 pub struct GrpcClient {
     client: MidenPrivateTransportClient<Timeout<Channel>>,
     // Last fetched timestamp
-    lts: DateTime<Utc>,
+    lts: HashMap<NoteTag, DateTime<Utc>>,
 }
 
 impl GrpcClient {
@@ -36,7 +36,7 @@ impl GrpcClient {
         let timeout = Duration::from_millis(timeout_ms);
         let timeout_channel = Timeout::new(channel, timeout);
         let client = MidenPrivateTransportClient::new(timeout_channel);
-        let lts = DateTime::from_timestamp(0, 0).unwrap();
+        let lts = HashMap::new();
 
         Ok(Self { client, lts })
     }
@@ -70,16 +70,17 @@ impl GrpcClient {
     }
 
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>> {
-        let request =
-            FetchNotesRequest {
-                tag: tag.as_u32(),
-                timestamp: Some(prost_types::Timestamp {
-                    seconds: self.lts.timestamp(),
-                    nanos: self.lts.timestamp_subsec_nanos().try_into().map_err(|_| {
-                        Error::Internal("Timestamp nanoseconds too large".to_string())
-                    })?,
-                }),
-            };
+        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
+        let request = FetchNotesRequest {
+            tag: tag.as_u32(),
+            timestamp: Some(prost_types::Timestamp {
+                seconds: ts.timestamp(),
+                nanos: ts
+                    .timestamp_subsec_nanos()
+                    .try_into()
+                    .map_err(|_| Error::Internal("Timestamp nanoseconds too large".to_string()))?,
+            }),
+        };
 
         let response = self
             .client
@@ -92,7 +93,7 @@ impl GrpcClient {
 
         // Convert protobuf notes to internal format and track the most recent received timestamp
         let mut notes = Vec::new();
-        let mut latest_received_at = self.lts;
+        let mut latest_received_at = ts;
 
         for note in response.notes {
             let header = NoteHeader::read_from_bytes(&note.header)
@@ -124,7 +125,7 @@ impl GrpcClient {
         }
 
         // Update the last timestamp to the most recent received timestamp
-        self.lts = latest_received_at;
+        self.lts.insert(tag, latest_received_at);
 
         Ok(notes)
     }
