@@ -32,6 +32,7 @@ tonic = { workspace = true }
 tower = { features = ["timeout"], version = "0.5" }
 
 # Serialization
+hex        = { workspace = true }
 serde      = { features = ["derive"], version = "1.0" }
 serde_json = "1.0"
 

@@ -94,16 +94,16 @@ impl EncryptionStore for FilesystemEncryptionStore {
     }
 
     fn add_key(&self, id: &AccountId, key: &SerializableKey) -> Result<()> {
-        let id_hex = format!("{:02x?}", id.to_bytes());
-        let key_path = self.key_dir.join(format!("{id_hex}.json"));
+        let id_hex = hex::encode(id.to_bytes());
+        let key_path = self.key_dir.join(format!("{id_hex}.key"));
         let key_json = serde_json::to_string(key)?;
         std::fs::write(key_path, key_json)?;
         Ok(())
     }
 
     fn get_key(&self, id: &AccountId) -> Result<Option<SerializableKey>> {
-        let id_hex = format!("{:02x?}", id.to_bytes());
-        let key_path = self.key_dir.join(format!("{id_hex}.json"));
+        let id_hex = hex::encode(id.to_bytes());
+        let key_path = self.key_dir.join(format!("{id_hex}.key"));
 
         if key_path.exists() {
             let key_json = std::fs::read_to_string(key_path)?;
