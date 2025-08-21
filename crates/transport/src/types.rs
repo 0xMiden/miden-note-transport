@@ -3,6 +3,7 @@ use miden_lib::{account::wallets::BasicWallet, note::create_p2id_note};
 // Use miden-objects
 pub use miden_objects::{
     Felt,
+    account::AccountId,
     block::BlockNumber,
     note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
 };
@@ -184,6 +185,42 @@ pub fn mock_note_p2id_with_accounts(
     let mut rng = RpoRandomCoin::new(Default::default());
     create_p2id_note(sender_id, target_id, vec![], NoteType::Private, Felt::default(), &mut rng)
         .unwrap()
+}
+
+pub fn mock_note_p2id_with_tag_and_accounts(
+    tag: NoteTag,
+    sender: AccountId,
+    target: AccountId,
+) -> miden_objects::note::Note {
+    use miden_objects::{
+        Felt,
+        asset::{Asset, FungibleAsset},
+        crypto::rand::FeltRng,
+        note::{NoteAssets, NoteExecutionHint, NoteMetadata},
+        testing::account_id::ACCOUNT_ID_PRIVATE_FUNGIBLE_FAUCET,
+    };
+    use rand::{Rng, RngCore};
+
+    let mut randrng = rand::rng();
+    let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
+    let mut rng = RpoRandomCoin::new(seed);
+    let serial_num = rng.draw_word();
+    let recipient = miden_lib::note::utils::build_p2id_recipient(target, serial_num).unwrap();
+
+    let metadata = NoteMetadata::new(
+        sender,
+        NoteType::Private,
+        tag,
+        NoteExecutionHint::always(),
+        Felt::default(),
+    )
+    .unwrap();
+
+    let faucet_id = AccountId::try_from(ACCOUNT_ID_PRIVATE_FUNGIBLE_FAUCET).unwrap();
+    let asset = Asset::Fungible(FungibleAsset::new(faucet_id, rng.random_range(..50000)).unwrap());
+    let vault = NoteAssets::new(vec![asset]).unwrap();
+
+    Note::new(vault, metadata, recipient)
 }
 
 /// Create a mock account ID for testing purposes

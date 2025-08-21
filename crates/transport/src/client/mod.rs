@@ -120,7 +120,7 @@ pub struct TransportLayerClient {
     transport_client: Box<dyn TransportClient>,
     encryption_store: Box<dyn EncryptionStore>,
     /// Owned account IDs
-    _account_ids: Vec<AccountId>,
+    account_ids: Vec<AccountId>,
     /// Mapping between owned account IDs and note tags
     tag_accid_map: HashMap<NoteTag, AccountId>,
 }
@@ -136,7 +136,7 @@ impl TransportLayerClient {
         Self {
             transport_client,
             encryption_store,
-            _account_ids: account_ids,
+            account_ids,
             tag_accid_map,
         }
     }
@@ -172,8 +172,25 @@ impl TransportLayerClient {
         Ok(decrypted_notes)
     }
 
-    pub fn add_key(&mut self, account_id: &AccountId, key: &SerializableKey) -> Result<()> {
+    /// Adds a key associated with an account ID to the encryption store
+    ///
+    /// The key can be either of the ego client, or another network participant.
+    pub fn add_key(&mut self, key: &SerializableKey, account_id: &AccountId) -> Result<()> {
         self.encryption_store.add_key(account_id, key)
+    }
+
+    /// Registers a tag to an account ID
+    ///
+    /// If the account ID is not provided, the tag is registered under all owned account IDs.
+    pub fn register_tag(&mut self, tag: NoteTag, account_id: Option<AccountId>) {
+        let account_ids = if let Some(account_id) = account_id {
+            &vec![account_id]
+        } else {
+            &self.account_ids
+        };
+        for id in account_ids {
+            self.tag_accid_map.insert(tag, *id);
+        }
     }
 
     fn get_accid_for_tag(&self, tag: NoteTag) -> Option<&AccountId> {
