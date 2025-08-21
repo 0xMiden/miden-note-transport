@@ -175,3 +175,26 @@ pub fn mock_note_p2id() -> miden_objects::note::Note {
     create_p2id_note(sender.id(), target.id(), vec![], NoteType::Private, Felt::default(), &mut rng)
         .unwrap()
 }
+
+/// Create a mock P2ID note with specified sender and target account IDs
+pub fn mock_note_p2id_with_accounts(
+    sender_id: miden_objects::account::AccountId,
+    target_id: miden_objects::account::AccountId,
+) -> miden_objects::note::Note {
+    let mut rng = RpoRandomCoin::new(Default::default());
+    create_p2id_note(sender_id, target_id, vec![], NoteType::Private, Felt::default(), &mut rng)
+        .unwrap()
+}
+
+/// Create a mock account ID for testing purposes
+pub fn mock_account_id() -> miden_objects::account::AccountId {
+    use rand::Rng;
+    let mut rng = rand::rng();
+    let (account, _seed) = AccountBuilder::new(rng.random())
+        .storage_mode(AccountStorageMode::Private)
+        .with_component(BasicWallet)
+        .with_auth_component(Auth::BasicAuth)
+        .build()
+        .unwrap();
+    account.id()
+}

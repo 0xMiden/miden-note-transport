@@ -6,12 +6,10 @@ use aes_gcm::{
 };
 use rand::RngCore;
 
-use super::EncryptionScheme;
+use super::EncryptionKey;
 use crate::{Error, Result};
 
-pub struct Aes256Gcm;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Aes256GcmKey([u8; 32]);
 
 impl Aes256GcmKey {
@@ -69,24 +67,18 @@ impl Aes256GcmKey {
     }
 }
 
-impl EncryptionScheme for Aes256Gcm {
-    type Key = Aes256GcmKey;
-    type PublicKey = Aes256GcmKey;
-
-    fn generate() -> Self::Key {
-        Aes256GcmKey::generate()
+// Implement the unified EncryptionKey trait
+impl EncryptionKey for Aes256GcmKey {
+    fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+        self.encrypt_data(plaintext)
     }
 
-    fn public_key(key: &Self::Key) -> Self::PublicKey {
-        key.clone()
+    fn decrypt(&self, ciphertext: &[u8]) -> Option<Result<Vec<u8>>> {
+        Some(self.decrypt_data(ciphertext))
     }
 
-    fn encrypt(key: &Self::PublicKey, plaintext: &[u8]) -> Result<Vec<u8>> {
-        key.encrypt_data(plaintext)
-    }
-
-    fn decrypt(key: &Self::Key, ciphertext: &[u8]) -> Result<Vec<u8>> {
-        key.decrypt_data(ciphertext)
+    fn generate() -> Option<Self> {
+        Some(Self::generate())
     }
 }
 
@@ -99,8 +91,8 @@ mod tests {
         let key = Aes256GcmKey::generate();
         let data = b"Hello, Miden Transport!";
 
-        let encrypted = Aes256Gcm::encrypt(&key, data).unwrap();
-        let decrypted = Aes256Gcm::decrypt(&key, &encrypted).unwrap();
+        let encrypted = key.encrypt(data).unwrap();
+        let decrypted = key.decrypt(&encrypted).unwrap().unwrap();
 
         assert_eq!(data, &decrypted[..]);
     }
@@ -111,8 +103,8 @@ mod tests {
         let key2 = Aes256GcmKey::generate();
         let data = b"Test data";
 
-        let encrypted = Aes256Gcm::encrypt(&key1, data).unwrap();
-        let result = Aes256Gcm::decrypt(&key2, &encrypted);
+        let encrypted = key1.encrypt(data).unwrap();
+        let result = key2.decrypt(&encrypted).unwrap();
 
         assert!(result.is_err());
     }

@@ -17,6 +17,7 @@ workspace = true
 [features]
 
 [dependencies]
+anyhow                  = { workspace = true }
 clap                    = { workspace = true }
 hex                     = { workspace = true }
 miden-objects           = { workspace = true }
