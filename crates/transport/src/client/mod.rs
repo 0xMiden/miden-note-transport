@@ -1,9 +1,11 @@
-use miden_objects::utils::{Deserializable, Serializable};
+use std::collections::HashMap;
 
-use self::crypto::{
-    EncryptionScheme,
-    aes::{Aes256Gcm, Aes256GcmKey},
+use miden_objects::{
+    account::AccountId,
+    utils::{Deserializable, Serializable},
 };
+
+use self::crypto::{EncryptionKey, SerializableKey};
 use crate::{
     Error, Result,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
@@ -28,11 +30,17 @@ pub trait TransportClient: Send + Sync {
 
 /// Encryption store trait for managing encryption keys
 pub trait EncryptionStore: Send + Sync {
-    /// Decrypt a message using the given public encryption key
-    fn decrypt(&self, pub_enc_key: &[u8], msg: &[u8]) -> Result<Vec<u8>>;
+    /// Decrypt a message using the stored key for the given account ID
+    fn decrypt(&self, msg: &[u8], id: &AccountId) -> Result<Vec<u8>>;
 
-    /// Encrypt data for a recipient using their public key
-    fn encrypt(&self, data: &[u8], recipient_pub_key: &[u8]) -> Result<Vec<u8>>;
+    /// Encrypt data for a recipient using their stored key
+    fn encrypt(&self, data: &[u8], id: &AccountId) -> Result<Vec<u8>>;
+
+    /// Add a key for an account ID
+    fn add_key(&self, id: &AccountId, key: &SerializableKey) -> Result<()>;
+
+    /// Get a key for an account ID
+    fn get_key(&self, id: &AccountId) -> Result<Option<SerializableKey>>;
 }
 
 /// Filesystem-based encryption store
@@ -46,40 +54,64 @@ impl FilesystemEncryptionStore {
         std::fs::create_dir_all(&key_dir)?;
         Ok(Self { key_dir })
     }
-
-    pub fn add_key(&self, key_id: &str, key_data: &[u8]) -> Result<()> {
-        let key_path = self.key_dir.join(format!("{key_id}.key"));
-        std::fs::write(key_path, key_data)?;
-        Ok(())
-    }
-
-    pub fn get_key(&self, key_id: &str) -> Result<Option<Vec<u8>>> {
-        let key_path = self.key_dir.join(format!("{key_id}.key"));
-        if key_path.exists() {
-            Ok(Some(std::fs::read(key_path)?))
-        } else {
-            Ok(None)
-        }
-    }
 }
 
 impl EncryptionStore for FilesystemEncryptionStore {
-    fn decrypt(&self, pub_enc_key: &[u8], msg: &[u8]) -> Result<Vec<u8>> {
-        // TODO use self/use stored key
-        let array: [u8; 32] = pub_enc_key
-            .try_into()
-            .map_err(|e| Error::Encryption(format!("Wrong key size: {e}")))?;
-        let key = Aes256GcmKey::new(array);
-        Aes256Gcm::decrypt(&key, msg)
+    fn decrypt(&self, msg: &[u8], id: &AccountId) -> Result<Vec<u8>> {
+        let key = self.get_key(id)?.ok_or_else(|| {
+            Error::Decryption(format!(
+                "Decryption key not found for Account ID {:02x?}",
+                id.to_bytes()
+            ))
+        })?;
+
+        if !key.can_decrypt() {
+            return Err(Error::Decryption("Key cannot be used for decryption".to_string()));
+        }
+
+        key.decrypt(msg)
+            .ok_or_else(|| Error::Decryption("Key does not support decryption".to_string()))?
     }
 
-    fn encrypt(&self, data: &[u8], recipient_pub_key: &[u8]) -> Result<Vec<u8>> {
-        // TODO use self/use stored key
-        let array: [u8; 32] = recipient_pub_key
-            .try_into()
-            .map_err(|e| Error::Encryption(format!("Wrong key size: {e}")))?;
-        let key = Aes256GcmKey::new(array);
-        Aes256Gcm::encrypt(&key, data)
+    fn encrypt(&self, data: &[u8], id: &AccountId) -> Result<Vec<u8>> {
+        let key = self.get_key(id)?.ok_or_else(|| {
+            Error::Encryption(format!(
+                "Encryption key not found for Account ID {:02x?}",
+                id.to_bytes()
+            ))
+        })?;
+
+        // For encryption, we might need the public key component
+        let encryption_key = if key.can_encrypt() {
+            key
+        } else if let Some(public_key) = key.public_key() {
+            public_key
+        } else {
+            return Err(Error::Encryption("Key cannot be used for encryption".to_string()));
+        };
+
+        encryption_key.encrypt(data)
+    }
+
+    fn add_key(&self, id: &AccountId, key: &SerializableKey) -> Result<()> {
+        let id_hex = format!("{:02x?}", id.to_bytes());
+        let key_path = self.key_dir.join(format!("{id_hex}.json"));
+        let key_json = serde_json::to_string(key)?;
+        std::fs::write(key_path, key_json)?;
+        Ok(())
+    }
+
+    fn get_key(&self, id: &AccountId) -> Result<Option<SerializableKey>> {
+        let id_hex = format!("{:02x?}", id.to_bytes());
+        let key_path = self.key_dir.join(format!("{id_hex}.json"));
+
+        if key_path.exists() {
+            let key_json = std::fs::read_to_string(key_path)?;
+            let key: SerializableKey = serde_json::from_str(&key_json)?;
+            Ok(Some(key))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -87,41 +119,47 @@ impl EncryptionStore for FilesystemEncryptionStore {
 pub struct TransportLayerClient {
     transport_client: Box<dyn TransportClient>,
     encryption_store: Box<dyn EncryptionStore>,
+    /// Owned account IDs
+    _account_ids: Vec<AccountId>,
+    /// Mapping between owned account IDs and note tags
+    tag_accid_map: HashMap<NoteTag, AccountId>,
 }
 
 impl TransportLayerClient {
     pub fn new(
         transport_client: Box<dyn TransportClient>,
         encryption_store: Box<dyn EncryptionStore>,
+        account_ids: Vec<AccountId>,
     ) -> Self {
-        Self { transport_client, encryption_store }
+        let tag_accid_map =
+            account_ids.iter().map(|id| (NoteTag::from_account_id(*id), *id)).collect();
+        Self {
+            transport_client,
+            encryption_store,
+            _account_ids: account_ids,
+            tag_accid_map,
+        }
     }
 
     /// Send a note to a recipient
-    pub async fn send_note(
-        &mut self,
-        note: Note,
-        recipient_pub_key: &[u8],
-    ) -> Result<(NoteId, NoteStatus)> {
+    pub async fn send_note(&mut self, note: Note, id: &AccountId) -> Result<(NoteId, NoteStatus)> {
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();
-        let encrypted = self.encryption_store.encrypt(&details_bytes, recipient_pub_key)?;
+        let encrypted = self.encryption_store.encrypt(&details_bytes, id)?;
         self.transport_client.send_note(header, encrypted).await
     }
 
     /// Fetch and decrypt notes for a tag
-    pub async fn fetch_notes(
-        &mut self,
-        tag: NoteTag,
-        pub_enc_key: &[u8],
-    ) -> Result<Vec<(NoteHeader, NoteDetails)>> {
+    pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<(NoteHeader, NoteDetails)>> {
         let infos = self.transport_client.fetch_notes(tag).await?;
         let mut decrypted_notes = Vec::new();
+        let id = self.get_accid_for_tag(tag).ok_or_else(|| {
+            Error::InvalidTag(format!("Account ID not found for tag {}", tag.as_u32()))
+        })?;
 
         for info in infos {
-            if let Ok(decrypted) = self.encryption_store.decrypt(pub_enc_key, &info.encrypted_data)
-            {
+            if let Ok(decrypted) = self.encryption_store.decrypt(&info.encrypted_data, id) {
                 let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
                     Error::Decryption(format!("Failed to deserialized decrypted details: {e}"))
                 })?;
@@ -132,5 +170,13 @@ impl TransportLayerClient {
         }
 
         Ok(decrypted_notes)
+    }
+
+    pub fn add_key(&mut self, account_id: &AccountId, key: &SerializableKey) -> Result<()> {
+        self.encryption_store.add_key(account_id, key)
+    }
+
+    fn get_accid_for_tag(&self, tag: NoteTag) -> Option<&AccountId> {
+        self.tag_accid_map.get(&tag)
     }
 }

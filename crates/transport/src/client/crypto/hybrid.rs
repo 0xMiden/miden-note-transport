@@ -3,13 +3,11 @@
 pub use x25519_dalek::PublicKey as X25519PublicKey;
 use x25519_dalek::{EphemeralSecret, SharedSecret, StaticSecret};
 
-use super::{EncryptionScheme, aes::Aes256GcmKey};
+use super::{EncryptionKey, aes::Aes256GcmKey};
 use crate::{Error, Result};
 
-pub struct X25519;
-
 /// X25519 keypair for asymmetric encryption
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct X25519KeyPair {
     public_key: X25519PublicKey,
     private_key: StaticSecret,
@@ -31,6 +29,35 @@ impl X25519KeyPair {
     /// Derive a shared secret with another party's public key
     pub fn derive_shared_secret(&self, other_public_key: &X25519PublicKey) -> SharedSecret {
         self.private_key.diffie_hellman(other_public_key)
+    }
+}
+
+// Implement the unified EncryptionKey trait
+impl EncryptionKey for X25519KeyPair {
+    fn encrypt(&self, _plaintext: &[u8]) -> Result<Vec<u8>> {
+        Err(Error::Encryption("Cannot encrypt with private key".to_string()))
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Option<Result<Vec<u8>>> {
+        Some(decrypt_data(ciphertext, self))
+    }
+
+    fn generate() -> Option<Self> {
+        Some(Self::generate())
+    }
+}
+
+impl EncryptionKey for X25519PublicKey {
+    fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+        encrypt_data(plaintext, self)
+    }
+
+    fn decrypt(&self, _ciphertext: &[u8]) -> Option<Result<Vec<u8>>> {
+        None // Public keys can't decrypt
+    }
+
+    fn generate() -> Option<Self> {
+        None // Cannot generate public key without private key
     }
 }
 
@@ -91,27 +118,6 @@ fn derive_aes_key_from_shared_secret(shared_secret: &SharedSecret) -> Aes256GcmK
     let mut key = [0u8; 32];
     key.copy_from_slice(&hash_result);
     Aes256GcmKey::new(key)
-}
-
-impl EncryptionScheme for X25519 {
-    type Key = X25519KeyPair;
-    type PublicKey = X25519PublicKey;
-
-    fn generate() -> Self::Key {
-        X25519KeyPair::generate()
-    }
-
-    fn public_key(key: &Self::Key) -> Self::PublicKey {
-        key.public_key
-    }
-
-    fn encrypt(key: &Self::PublicKey, plaintext: &[u8]) -> Result<Vec<u8>> {
-        encrypt_data(plaintext, key)
-    }
-
-    fn decrypt(key: &Self::Key, ciphertext: &[u8]) -> Result<Vec<u8>> {
-        decrypt_data(ciphertext, key)
-    }
 }
 
 #[cfg(test)]

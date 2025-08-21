@@ -543,6 +543,7 @@ dependencies = [
  "curve25519-dalek-derive",
  "fiat-crypto",
  "rustc_version 0.4.1",
+ "serde",
  "subtle",
  "zeroize",
 ]
@@ -1671,6 +1672,7 @@ dependencies = [
 name = "miden-private-transport-cli"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "hex",
  "miden-objects",

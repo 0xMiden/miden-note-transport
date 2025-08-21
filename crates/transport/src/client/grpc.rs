@@ -18,6 +18,7 @@ use crate::{
     types::{NoteHeader, NoteId, NoteInfo, NoteTag},
 };
 
+#[derive(Clone)]
 pub struct GrpcClient {
     client: MidenPrivateTransportClient<Timeout<Channel>>,
     // Last fetched timestamp

@@ -45,7 +45,7 @@ sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
 aes-gcm      = "0.10"
 rand         = "0.9"
 sha2         = "0.10"
-x25519-dalek = { features = ["getrandom", "static_secrets"], version = "2.0" }
+x25519-dalek = { features = ["getrandom", "serde", "static_secrets"], version = "2.0" }
 
 # Logging
 opentelemetry         = { version = "0.30" }
