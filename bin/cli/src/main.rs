@@ -81,8 +81,13 @@ async fn main() -> Result<()> {
     let encryption_store = FilesystemEncryptionStore::new("./keys")?;
     let account_id = AccountId::from_hex(&args.account_id)
         .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
-    let mut client =
-        TransportLayerClient::new(Box::new(grpc), Box::new(encryption_store), vec![account_id]);
+    let mut client = TransportLayerClient::init(
+        Box::new(grpc),
+        Box::new(encryption_store),
+        vec![account_id],
+        None,
+    )
+    .await?;
 
     match args.command {
         Commands::Send { note, key } => {

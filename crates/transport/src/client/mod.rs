@@ -5,13 +5,17 @@ use miden_objects::{
     utils::{Deserializable, Serializable},
 };
 
-use self::crypto::{EncryptionKey, SerializableKey};
+use self::{
+    crypto::{EncryptionKey, SerializableKey},
+    database::{ClientDatabase, ClientDatabaseConfig},
+};
 use crate::{
     Error, Result,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
 
 pub mod crypto;
+pub mod database;
 pub mod grpc;
 
 /// The main transport client trait for sending and receiving encrypted notes
@@ -123,22 +127,29 @@ pub struct TransportLayerClient {
     account_ids: Vec<AccountId>,
     /// Mapping between owned account IDs and note tags
     tag_accid_map: HashMap<NoteTag, AccountId>,
+    /// Client database for persistent state
+    database: ClientDatabase,
 }
 
 impl TransportLayerClient {
-    pub fn new(
+    pub async fn init(
         transport_client: Box<dyn TransportClient>,
         encryption_store: Box<dyn EncryptionStore>,
         account_ids: Vec<AccountId>,
-    ) -> Self {
+        database_config: Option<ClientDatabaseConfig>,
+    ) -> Result<Self> {
+        let database = ClientDatabase::new_sqlite(database_config.unwrap_or_default()).await?;
+
         let tag_accid_map =
             account_ids.iter().map(|id| (NoteTag::from_account_id(*id), *id)).collect();
-        Self {
+
+        Ok(Self {
             transport_client,
             encryption_store,
             account_ids,
             tag_accid_map,
-        }
+            database,
+        })
     }
 
     /// Send a note to a recipient
@@ -159,24 +170,91 @@ impl TransportLayerClient {
         })?;
 
         for info in infos {
-            if let Ok(decrypted) = self.encryption_store.decrypt(&info.encrypted_data, id) {
-                let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
-                    Error::Decryption(format!("Failed to deserialized decrypted details: {e}"))
-                })?;
-                decrypted_notes.push((info.header, details));
-            } else {
-                // Skip notes that can't be decrypted with this key
+            // Check if we've already fetched this note
+            if !self.database.note_fetched(&info.header.id()).await? {
+                // Try to decrypt the note
+                if let Ok(decrypted) = self.encryption_store.decrypt(&info.encrypted_data, id) {
+                    // Mark note as fetched
+                    self.database.record_fetched_note(&info.header.id(), tag).await?;
+
+                    let details = NoteDetails::read_from_bytes(&decrypted).map_err(|e| {
+                        Error::Decryption(format!("Failed to deserialize decrypted details: {e}"))
+                    })?;
+                    decrypted_notes.push((info.header, details));
+
+                    // Store the encrypted note
+                    self.database
+                        .store_encrypted_note(
+                            &info.header.id(),
+                            tag,
+                            &info.header,
+                            &info.encrypted_data,
+                            info.created_at,
+                        )
+                        .await?;
+                } else {
+                    // Skip notes that can't be decrypted
+                }
             }
         }
 
         Ok(decrypted_notes)
     }
 
-    /// Adds a key associated with an account ID to the encryption store
+    /// Adds a key associated with an account ID to the encryption store and database
     ///
     /// The key can be either of the ego client, or another network participant.
-    pub fn add_key(&mut self, key: &SerializableKey, account_id: &AccountId) -> Result<()> {
-        self.encryption_store.add_key(account_id, key)
+    pub async fn add_key(&mut self, key: &SerializableKey, account_id: &AccountId) -> Result<()> {
+        self.encryption_store.add_key(account_id, key)?;
+        self.database.store_key(account_id, key).await?;
+
+        Ok(())
+    }
+
+    /// Get a public key for an account ID from the database
+    pub async fn get_key(&self, account_id: &AccountId) -> Result<Option<SerializableKey>> {
+        self.database.get_key(account_id).await
+    }
+
+    /// Get all stored public keys from the database
+    pub async fn get_all_keys(&self) -> Result<Vec<(AccountId, SerializableKey)>> {
+        self.database.get_all_keys().await
+    }
+
+    /// Check if a note has been fetched before
+    pub async fn note_fetched(&self, note_id: &NoteId) -> Result<bool> {
+        self.database.note_fetched(note_id).await
+    }
+
+    /// Get all fetched note IDs for a specific tag
+    pub async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>> {
+        self.database.get_fetched_notes_for_tag(tag).await
+    }
+
+    /// Get an encrypted note from the database
+    pub async fn get_encrypted_note(
+        &self,
+        note_id: &NoteId,
+    ) -> Result<Option<database::EncryptedNote>> {
+        self.database.get_encrypted_note(note_id).await
+    }
+
+    /// Get all encrypted notes for a specific tag
+    pub async fn get_encrypted_notes_for_tag(
+        &self,
+        tag: NoteTag,
+    ) -> Result<Vec<database::EncryptedNote>> {
+        self.database.get_encrypted_notes_for_tag(tag).await
+    }
+
+    /// Get database statistics
+    pub async fn get_database_stats(&self) -> Result<database::ClientDatabaseStats> {
+        self.database.get_stats().await
+    }
+
+    /// Clean up old data based on retention policy
+    pub async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64> {
+        self.database.cleanup_old_data(retention_days).await
     }
 
     /// Registers a tag to an account ID
