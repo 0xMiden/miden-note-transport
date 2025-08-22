@@ -140,8 +140,16 @@ impl TransportLayerClient {
     ) -> Result<Self> {
         let database = ClientDatabase::new_sqlite(database_config.unwrap_or_default()).await?;
 
-        let tag_accid_map =
+        // Start with default tag mappings for owned account IDs
+        let mut tag_accid_map: HashMap<NoteTag, AccountId> =
             account_ids.iter().map(|id| (NoteTag::from_account_id(*id), *id)).collect();
+
+        // Load existing tag mappings from database
+        if let Ok(existing_mappings) = database.get_all_tag_account_mappings().await {
+            for (tag, account_id) in existing_mappings {
+                tag_accid_map.insert(tag, account_id);
+            }
+        }
 
         Ok(Self {
             transport_client,
@@ -265,7 +273,11 @@ impl TransportLayerClient {
     /// Registers a tag to an account ID
     ///
     /// If the account ID is not provided, the tag is registered under all owned account IDs.
-    pub fn register_tag(&mut self, tag: NoteTag, account_id: Option<AccountId>) {
+    pub async fn register_tag(
+        &mut self,
+        tag: NoteTag,
+        account_id: Option<AccountId>,
+    ) -> Result<()> {
         let account_ids = if let Some(account_id) = account_id {
             &vec![account_id]
         } else {
@@ -273,7 +285,10 @@ impl TransportLayerClient {
         };
         for id in account_ids {
             self.tag_accid_map.insert(tag, *id);
+            // Persist the mapping to database
+            self.database.store_tag_account_mapping(tag, id).await?;
         }
+        Ok(())
     }
 
     fn get_accid_for_tag(&self, tag: NoteTag) -> Option<&AccountId> {

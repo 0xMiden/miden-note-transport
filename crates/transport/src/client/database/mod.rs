@@ -45,6 +45,12 @@ pub trait ClientDatabaseBackend: Send + Sync {
     /// Get all fetched note IDs for a specific tag
     async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>>;
 
+    /// Store a tag to account ID mapping
+    async fn store_tag_account_mapping(&self, tag: NoteTag, account_id: &AccountId) -> Result<()>;
+
+    /// Get all tag to account ID mappings
+    async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>>;
+
     /// Get database statistics
     async fn get_stats(&self) -> Result<ClientDatabaseStats>;
 
@@ -98,6 +104,20 @@ impl ClientDatabase {
     /// Get all stored keys
     pub async fn get_all_keys(&self) -> Result<Vec<(AccountId, SerializableKey)>> {
         self.backend.get_all_keys().await
+    }
+
+    /// Store a tag to account ID mapping
+    pub async fn store_tag_account_mapping(
+        &self,
+        tag: NoteTag,
+        account_id: &AccountId,
+    ) -> Result<()> {
+        self.backend.store_tag_account_mapping(tag, account_id).await
+    }
+
+    /// Get all tag to account ID mappings
+    pub async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>> {
+        self.backend.get_all_tag_account_mappings().await
     }
 
     /// Store an encrypted note

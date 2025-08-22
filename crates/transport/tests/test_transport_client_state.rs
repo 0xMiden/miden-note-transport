@@ -19,7 +19,7 @@ async fn test_transport_client_note_fetch_tracking()
     let tag = TAG_LOCALANY.into();
 
     client0.add_key(&pubkey1, &accid1).await.unwrap();
-    client1.register_tag(tag, None);
+    client1.register_tag(tag, None).await.unwrap();
 
     // Verify the key is stored in the database
     let retrieved_key = client0.get_key(&accid1).await.unwrap();

@@ -82,8 +82,8 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
     let sent_tag0 = TAG_LOCALANY.into();
     let sent_tag1 = (TAG_LOCALANY + 1).into();
 
-    client2.register_tag(sent_tag0, None);
-    client2.register_tag(sent_tag1, None);
+    client2.register_tag(sent_tag0, None).await.unwrap();
+    client2.register_tag(sent_tag1, None).await.unwrap();
 
     let note0 = mock_note_p2id_with_tag_and_accounts(sent_tag0, accid0, accid2);
     let note1 = mock_note_p2id_with_tag_and_accounts(sent_tag1, accid1, accid2);

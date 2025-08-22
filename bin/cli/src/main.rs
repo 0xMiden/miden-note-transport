@@ -1,10 +1,14 @@
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use miden_objects::{account::AccountId, note::Note, utils::Deserializable};
 use miden_private_transport::{
     Error, Result,
     client::{
-        FilesystemEncryptionStore, TransportLayerClient, crypto::aes::Aes256GcmKey,
+        FilesystemEncryptionStore, TransportLayerClient,
+        crypto::{SerializableKey, aes::Aes256GcmKey},
+        database::ClientDatabaseConfig,
         grpc::GrpcClient,
     },
     logging::{OpenTelemetry, setup_tracing},
@@ -21,13 +25,17 @@ struct Args {
     #[arg(long, default_value = "http://localhost:8080")]
     endpoint: String,
 
-    /// Listening Account ID
-    #[arg(long)]
-    account_id: String,
-
     /// Request timeout (ms)
     #[arg(long, default_value = "1000")]
     timeout: u64,
+
+    /// Database path for persistence
+    #[arg(long, default_value = "./cli-db.sqlite")]
+    database: PathBuf,
+
+    /// Keys directory
+    #[arg(long, default_value = "./keys")]
+    keys_dir: PathBuf,
 
     #[command(subcommand)]
     command: Commands,
@@ -41,9 +49,9 @@ enum Commands {
         #[arg(long)]
         note: String,
 
-        /// Recipient's public key
+        /// Recipient's account ID
         #[arg(long)]
-        key: String,
+        account_id: String,
     },
 
     /// Fetch notes for a tag
@@ -53,17 +61,60 @@ enum Commands {
         tag: u32,
     },
 
+    /// Initialize the client with an account
+    Init {
+        /// Listening account ID
+        #[arg(long)]
+        account_id: String,
+        /// Decryption key (hex encoded)
+        #[arg(long)]
+        key: String,
+    },
+
     /// Generate a new encryption key
-    GenerateKey,
+    GenerateKey {
+        /// Key type: aes or x25519
+        key_type: String,
+    },
 
-    /// Check node health
-    Health,
+    /// Add a key associated to an account ID
+    AddKey {
+        /// Key
+        #[arg(long)]
+        key: String,
+        /// Account ID
+        #[arg(long)]
+        account_id: String,
+    },
 
-    /// Get node statistics
-    Stats,
+    /// Clean up old data
+    Cleanup {
+        /// Retention period in days
+        days: u32,
+    },
+
+    /// List all stored keys
+    ListKeys,
+
+    /// Register a tag for listening
+    RegisterTag {
+        /// Tag to register
+        #[arg(long)]
+        tag: u32,
+        /// Account ID
+        #[arg(long)]
+        account_id: Option<String>,
+    },
 
     /// Random note for testing purposes
-    TestNote,
+    TestNote {
+        /// Recipient account ID
+        #[arg(long)]
+        recipient: String,
+    },
+
+    /// Random account ID for testing purposes
+    TestAccountId,
 }
 
 #[tokio::main]
@@ -75,38 +126,63 @@ async fn main() -> Result<()> {
 
     info!("Miden Transport CLI");
     info!("Endpoint: {}", args.endpoint);
+    info!("Database: {:?}", args.database);
+    info!("Keys directory: {:?}", args.keys_dir);
+    info!("Database path: {:?}", args.database);
+
+    let db_config = ClientDatabaseConfig {
+        database_path: args.database.to_string_lossy().to_string(),
+        max_note_size: 1024 * 1024, // 1MB
+    };
 
     // Create client
     let grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
-    let encryption_store = FilesystemEncryptionStore::new("./keys")?;
-    let account_id = AccountId::from_hex(&args.account_id)
-        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+    let encryption_store = FilesystemEncryptionStore::new(args.keys_dir)?;
     let mut client = TransportLayerClient::init(
         Box::new(grpc),
         Box::new(encryption_store),
-        vec![account_id],
-        None,
+        vec![],
+        Some(db_config),
     )
     .await?;
 
     match args.command {
-        Commands::Send { note, key } => {
-            send_note(&mut client, &note, &key).await?;
+        Commands::Send { note, account_id } => {
+            send_note(&mut client, &note, &account_id).await?;
         },
         Commands::Fetch { tag } => {
             fetch_notes(&mut client, tag).await?;
         },
-        Commands::GenerateKey => {
-            generate_key();
+        Commands::Init { account_id, key } => {
+            init(&mut client, account_id, key).await?;
         },
-        Commands::Health => {
-            health_check(&client);
+        Commands::GenerateKey { key_type } => {
+            generate_key(&key_type);
         },
-        Commands::Stats => {
-            get_stats(&client);
+        Commands::AddKey { key, account_id } => {
+            add_key(&mut client, &key, &account_id).await?;
         },
-        Commands::TestNote => {
-            mock_note();
+        Commands::Cleanup { days } => {
+            cleanup_old_data(&client, days).await?;
+        },
+        Commands::ListKeys => {
+            list_keys(&client).await?;
+        },
+        Commands::RegisterTag { tag, account_id } => {
+            let account_id = account_id
+                .map(|id| {
+                    AccountId::from_hex(&id)
+                        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))
+                })
+                .transpose()?;
+            client.register_tag(tag.into(), account_id).await?;
+            println!("✅ Tag {tag} registered successfully");
+        },
+        Commands::TestNote { recipient } => {
+            mock_note(&recipient)?;
+        },
+        Commands::TestAccountId => {
+            test_account_id();
         },
     }
 
@@ -151,33 +227,143 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> 
     Ok(())
 }
 
-fn generate_key() {
-    let key = Aes256GcmKey::generate();
-    let hex_key = hex::encode(key.as_bytes());
-    println!("Generated encryption key: {hex_key}");
+async fn init(client: &mut TransportLayerClient, account_id: String, key: String) -> Result<()> {
+    let account_id = AccountId::from_hex(&account_id)
+        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+
+    // Parse the key from hex
+    let key_bytes =
+        hex::decode(&key).map_err(|e| Error::Generic(anyhow!("Invalid hex key: {e}")))?;
+
+    // Try to deserialize as SerializableKey
+    let serializable_key = match serde_json::from_slice::<SerializableKey>(&key_bytes) {
+        Ok(key) => key,
+        Err(_) => {
+            // If JSON deserialization fails, try to create an AES key from the bytes
+            if key_bytes.len() == 32 {
+                let aes_key = Aes256GcmKey::new(key_bytes.try_into().unwrap());
+                SerializableKey::Aes256Gcm(aes_key)
+            } else {
+                return Err(Error::Generic(anyhow!("Invalid key format or length")));
+            }
+        },
+    };
+
+    client.add_account_id(&account_id);
+    client.add_key(&serializable_key, &account_id).await?;
+    // By default, register NoteTag derived from this Account Id
+    client
+        .register_tag(miden_private_transport::types::NoteTag::from_account_id(account_id), None)
+        .await?;
+
+    info!("Successfully initialized client with account {} and key", account_id);
+
+    Ok(())
 }
 
-fn health_check(_client: &TransportLayerClient) {
-    info!("Checking node health");
+fn generate_key(key_type: &str) {
+    let key = match key_type {
+        "aes" => SerializableKey::generate_aes(),
+        "x25519" => SerializableKey::generate_x25519(),
+        _ => {
+            println!("❌ Invalid key type '{key_type}'. Use 'aes' or 'x25519'");
+            return;
+        },
+    };
 
-    // For now, we'll need to access the API client directly
-    // This is a limitation of the current TransportLayerClient design
-    println!("❌ Health check not implemented in TransportLayerClient");
-    println!("Use GrpcClient directly for health checks");
+    let hex_key = hex::encode(serde_json::to_vec(&key).unwrap());
+    println!("Generated {key_type} encryption key: {hex_key}");
+
+    if let Some(public_key) = key.public_key() {
+        let pub_hex = hex::encode(serde_json::to_vec(&public_key).unwrap());
+        println!("Public key: {pub_hex}");
+    }
 }
 
-fn get_stats(_client: &TransportLayerClient) {
-    info!("Getting node statistics");
+async fn add_key(client: &mut TransportLayerClient, key: &str, account_id: &str) -> Result<()> {
+    let key_bytes =
+        hex::decode(key).map_err(|e| Error::Generic(anyhow!("Invalid hex key: {e}")))?;
 
-    // For now, we'll need to access the API client directly
-    // This is a limitation of the current TransportLayerClient design
-    println!("❌ Stats not implemented in TransportLayerClient");
-    println!("Use GrpcClient directly for statistics");
+    // Try to deserialize as SerializableKey
+    let serializable_key = match serde_json::from_slice::<SerializableKey>(&key_bytes) {
+        Ok(key) => key,
+        Err(_) => {
+            // If JSON deserialization fails, try to create an AES key from the bytes
+            if key_bytes.len() == 32 {
+                let aes_key = Aes256GcmKey::new(key_bytes.try_into().unwrap());
+                SerializableKey::Aes256Gcm(aes_key)
+            } else {
+                return Err(Error::Generic(anyhow!("Invalid key format or length")));
+            }
+        },
+    };
+
+    let account_id = AccountId::from_hex(account_id)
+        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+
+    client.add_account_id(&account_id);
+    client.add_key(&serializable_key, &account_id).await?;
+
+    info!("Successfully added key for account {}", account_id);
+
+    Ok(())
 }
 
-fn mock_note() {
+async fn cleanup_old_data(client: &TransportLayerClient, days: u32) -> Result<()> {
+    info!("Cleaning up data older than {} days", days);
+
+    match client.cleanup_old_data(days).await {
+        Ok(deleted_count) => {
+            println!("✅ Cleaned up {deleted_count} old records");
+        },
+        Err(e) => {
+            println!("❌ Cleanup failed: {e}");
+        },
+    }
+
+    Ok(())
+}
+
+async fn list_keys(client: &TransportLayerClient) -> Result<()> {
+    info!("Listing all stored keys");
+
+    match client.get_all_keys().await {
+        Ok(keys) => {
+            if keys.is_empty() {
+                println!("No keys stored");
+            } else {
+                println!("Stored keys:");
+                for (account_id, key) in keys {
+                    println!(
+                        "  Account: {} -> Key type: {:?}",
+                        account_id,
+                        std::mem::discriminant(&key)
+                    );
+                }
+            }
+        },
+        Err(e) => {
+            println!("❌ Failed to list keys: {e}");
+        },
+    }
+
+    Ok(())
+}
+
+fn mock_note(recipient: &str) -> Result<()> {
     use miden_objects::utils::Serializable;
-    let note = miden_private_transport::types::mock_note_p2id();
+    let account_id = AccountId::from_hex(recipient)
+        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+    let note = miden_private_transport::types::mock_note_p2id_with_accounts(
+        miden_private_transport::types::mock_account_id(),
+        account_id,
+    );
     let hex_note = hex::encode(note.to_bytes());
     info!("Test note: {}", hex_note);
+    Ok(())
+}
+
+fn test_account_id() {
+    let account_id = miden_private_transport::types::mock_account_id();
+    println!("Test account ID: {account_id}");
 }

@@ -9,13 +9,13 @@ use sqlx::{Row, SqlitePool};
 use super::{ClientDatabaseBackend, ClientDatabaseConfig, ClientDatabaseStats, EncryptedNote};
 use crate::Result;
 
-/// SQLite implementation of the client database
+/// `SQLite` implementation of the client database
 pub struct SqliteClientDatabase {
     pool: SqlitePool,
 }
 
 impl SqliteClientDatabase {
-    /// Connect to the SQLite client database
+    /// Connect to the `SQLite` client database
     pub async fn connect(config: ClientDatabaseConfig) -> Result<Self> {
         if !std::path::Path::new(&config.database_path).exists() {
             std::fs::File::create(&config.database_path).map_err(crate::Error::Io)?;
@@ -68,6 +68,19 @@ impl SqliteClientDatabase {
                 encrypted_data BLOB NOT NULL,
                 created_at TEXT NOT NULL,
                 stored_at TEXT NOT NULL
+            ) STRICT;
+            ",
+        )
+        .execute(pool)
+        .await?;
+
+        // Table for storing tag to account ID mappings
+        sqlx::query(
+            r"
+            CREATE TABLE IF NOT EXISTS tag_account_mappings (
+                tag INTEGER PRIMARY KEY,
+                account_id BLOB NOT NULL,
+                created_at TEXT NOT NULL
             ) STRICT;
             ",
         )
@@ -415,5 +428,52 @@ impl ClientDatabaseBackend for SqliteClientDatabase {
         .await?;
 
         Ok(result.rows_affected())
+    }
+
+    async fn store_tag_account_mapping(&self, tag: NoteTag, account_id: &AccountId) -> Result<()> {
+        let now = Utc::now();
+
+        sqlx::query(
+            r"
+            INSERT OR REPLACE INTO tag_account_mappings (tag, account_id, created_at)
+            VALUES (?, ?, ?)
+            ",
+        )
+        .bind(i64::from(tag.as_u32()))
+        .bind(&account_id.to_bytes()[..])
+        .bind(now.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>> {
+        let rows = sqlx::query(
+            r"
+            SELECT tag, account_id FROM tag_account_mappings
+            ORDER BY created_at ASC
+            ",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut mappings = Vec::new();
+        for row in rows {
+            let tag: u32 = row.try_get("tag")?;
+            let account_id_bytes: Vec<u8> = row.try_get("account_id")?;
+
+            let tag = NoteTag::from(tag);
+            let account_id = AccountId::read_from_bytes(&account_id_bytes).map_err(|e| {
+                crate::Error::Database(sqlx::Error::ColumnDecode {
+                    index: "account_id".to_string(),
+                    source: Box::new(e),
+                })
+            })?;
+
+            mappings.push((tag, account_id));
+        }
+
+        Ok(mappings)
     }
 }
