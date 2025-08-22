@@ -17,7 +17,11 @@ pub struct SqliteClientDatabase {
 impl SqliteClientDatabase {
     /// Connect to the SQLite client database
     pub async fn connect(config: ClientDatabaseConfig) -> Result<Self> {
-        let pool = SqlitePool::connect(&format!("sqlite:{}", config.database_path)).await?;
+        if !std::path::Path::new(&config.database_path).exists() {
+            std::fs::File::create(&config.database_path).map_err(crate::Error::Io)?;
+        }
+
+        let pool = SqlitePool::connect(&format!("sqlite://{}", config.database_path)).await?;
 
         // Create tables if they don't exist
         Self::create_tables(&pool).await?;
