@@ -211,12 +211,17 @@ impl TransportLayerClient {
         Ok(())
     }
 
-    /// Get a public key for an account ID from the database
+    /// Adds an ego account ID
+    pub fn add_account_id(&mut self, account_id: &AccountId) {
+        self.account_ids.push(*account_id);
+    }
+
+    /// Get a key for an account ID from the database
     pub async fn get_key(&self, account_id: &AccountId) -> Result<Option<SerializableKey>> {
         self.database.get_key(account_id).await
     }
 
-    /// Get all stored public keys from the database
+    /// Get all stored keys from the database
     pub async fn get_all_keys(&self) -> Result<Vec<(AccountId, SerializableKey)>> {
         self.database.get_all_keys().await
     }
