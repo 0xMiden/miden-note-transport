@@ -42,7 +42,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    setup_tracing(OpenTelemetry::Enabled)?;
+    setup_tracing(OpenTelemetry::Disabled)?;
 
     // Parse command line arguments
     let args = Args::parse();
