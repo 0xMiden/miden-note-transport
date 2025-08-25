@@ -17,11 +17,12 @@ pub struct SqliteClientDatabase {
 impl SqliteClientDatabase {
     /// Connect to the `SQLite` client database
     pub async fn connect(config: ClientDatabaseConfig) -> Result<Self> {
-        if !std::path::Path::new(&config.database_path).exists() {
-            std::fs::File::create(&config.database_path).map_err(crate::Error::Io)?;
+        if !std::path::Path::new(&config.url).exists() && !config.url.contains(":memory:") {
+            std::fs::File::create(&config.url).map_err(crate::Error::Io)?;
         }
+        let url = format!("sqlite:{}", config.url);
 
-        let pool = SqlitePool::connect(&format!("sqlite://{}", config.database_path)).await?;
+        let pool = SqlitePool::connect(&url).await?;
 
         // Create tables if they don't exist
         Self::create_tables(&pool).await?;
@@ -108,7 +109,7 @@ impl ClientDatabaseBackend for SqliteClientDatabase {
     async fn store_key(
         &self,
         account_id: &AccountId,
-        key: &crate::client::crypto::SerializableKey,
+        key: &crate::crypto::SerializableKey,
     ) -> Result<()> {
         let now = Utc::now();
         let key_json = serde_json::to_string(key)?;
@@ -132,7 +133,7 @@ impl ClientDatabaseBackend for SqliteClientDatabase {
     async fn get_key(
         &self,
         account_id: &AccountId,
-    ) -> Result<Option<crate::client::crypto::SerializableKey>> {
+    ) -> Result<Option<crate::crypto::SerializableKey>> {
         let row = sqlx::query(
             r"
             SELECT key_data FROM public_keys WHERE account_id = ?
@@ -144,16 +145,14 @@ impl ClientDatabaseBackend for SqliteClientDatabase {
 
         if let Some(row) = row {
             let key_json: String = row.try_get("key_data")?;
-            let key: crate::client::crypto::SerializableKey = serde_json::from_str(&key_json)?;
+            let key: crate::crypto::SerializableKey = serde_json::from_str(&key_json)?;
             Ok(Some(key))
         } else {
             Ok(None)
         }
     }
 
-    async fn get_all_keys(
-        &self,
-    ) -> Result<Vec<(AccountId, crate::client::crypto::SerializableKey)>> {
+    async fn get_all_keys(&self) -> Result<Vec<(AccountId, crate::crypto::SerializableKey)>> {
         let rows = sqlx::query(
             r"
             SELECT account_id, key_data FROM public_keys
@@ -174,7 +173,7 @@ impl ClientDatabaseBackend for SqliteClientDatabase {
                     source: Box::new(e),
                 })
             })?;
-            let key: crate::client::crypto::SerializableKey = serde_json::from_str(&key_json)?;
+            let key: crate::crypto::SerializableKey = serde_json::from_str(&key_json)?;
             keys.push((account_id, key));
         }
 

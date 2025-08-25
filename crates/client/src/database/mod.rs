@@ -4,7 +4,7 @@ use miden_objects::{
     note::{NoteHeader, NoteId, NoteTag},
 };
 
-use crate::{Result, client::crypto::SerializableKey};
+use crate::{Result, crypto::SerializableKey};
 
 pub mod sqlite;
 
@@ -61,14 +61,14 @@ pub trait ClientDatabaseBackend: Send + Sync {
 /// Client database configuration
 #[derive(Debug, Clone)]
 pub struct ClientDatabaseConfig {
-    pub database_path: String,
+    pub url: String,
     pub max_note_size: usize,
 }
 
 impl Default for ClientDatabaseConfig {
     fn default() -> Self {
         Self {
-            database_path: ":memory:".to_string(),
+            url: "sqlite::memory:".to_string(),
             max_note_size: 1024 * 1024, // 1MB default
         }
     }
@@ -199,10 +199,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_database_operations() {
-        let config = ClientDatabaseConfig {
-            database_path: ":memory:".to_string(),
-            ..Default::default()
-        };
+        let config = ClientDatabaseConfig::default();
 
         let db = ClientDatabase::new_sqlite(config).await.unwrap();
 

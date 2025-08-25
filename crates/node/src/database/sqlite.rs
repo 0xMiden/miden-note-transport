@@ -16,7 +16,12 @@ pub struct SQLiteDB {
 #[async_trait::async_trait]
 impl DatabaseBackend for SQLiteDB {
     async fn connect(config: DatabaseConfig) -> Result<Self> {
-        let pool = SqlitePool::connect(&config.url).await?;
+        if !std::path::Path::new(&config.url).exists() && !config.url.contains(":memory:") {
+            std::fs::File::create(&config.url).map_err(crate::Error::Io)?;
+        }
+        let url = format!("sqlite:{}", config.url);
+
+        let pool = SqlitePool::connect(&url).await?;
 
         // Create tables if they don't exist
         sqlx::query(

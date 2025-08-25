@@ -1637,7 +1637,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "miden-private-transport"
+name = "miden-private-transport-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "hex",
+ "miden-objects",
+ "miden-private-transport-client",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "miden-private-transport-client"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -1647,6 +1661,7 @@ dependencies = [
  "hex",
  "miden-lib",
  "miden-objects",
+ "miden-private-transport-node",
  "miden-private-transport-proto",
  "miden-testing",
  "opentelemetry",
@@ -1670,25 +1685,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "miden-private-transport-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "hex",
- "miden-objects",
- "miden-private-transport",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "miden-private-transport-node"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "miden-objects",
+ "miden-private-transport-proto",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "prost-types",
+ "rand 0.9.2",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sqlx",
+ "thiserror 2.0.15",
+ "tokio",
+ "tonic",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "miden-private-transport-node-bin"
+version = "0.1.0"
+dependencies = [
  "clap",
- "miden-private-transport",
+ "miden-private-transport-node",
  "tokio",
  "tracing",
 ]

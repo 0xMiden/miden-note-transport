@@ -10,8 +10,9 @@
 
 ### Crates
 
+- `client`: Client implementation.
+- `node`: Node/server implementation.
 - `proto`: Protobuf definitions and generated code;
-- `transport`: Node/server and client implementations.
 
 ## Quick Start
 
