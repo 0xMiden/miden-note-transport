@@ -1,7 +1,7 @@
 mod common;
 
 use miden_objects::note::NoteTag;
-use miden_private_transport::types::{
+use miden_private_transport_client::types::{
     NoteStatus, mock_note_p2id_with_accounts, mock_note_p2id_with_tag_and_accounts,
 };
 

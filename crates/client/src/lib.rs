@@ -1,3 +1,10 @@
+pub mod crypto;
+pub mod database;
+pub mod error;
+pub mod grpc;
+pub mod logging;
+pub mod types;
+
 use std::collections::HashMap;
 
 use miden_objects::{
@@ -8,15 +15,12 @@ use miden_objects::{
 use self::{
     crypto::{EncryptionKey, SerializableKey},
     database::{ClientDatabase, ClientDatabaseConfig},
-};
-use crate::{
-    Error, Result,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
-
-pub mod crypto;
-pub mod database;
-pub mod grpc;
+pub use self::{
+    error::{Error, Result},
+    grpc::GrpcClient,
+};
 
 /// The main transport client trait for sending and receiving encrypted notes
 #[async_trait::async_trait]

@@ -1,5 +1,5 @@
 use clap::Parser;
-use miden_private_transport::{
+use miden_private_transport_node::{
     Node, NodeConfig, Result,
     database::DatabaseConfig,
     logging::{OpenTelemetry, setup_tracing},

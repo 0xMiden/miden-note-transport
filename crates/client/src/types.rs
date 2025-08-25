@@ -46,51 +46,6 @@ pub struct NoteInfo {
     pub created_at: DateTime<Utc>,
 }
 
-/// Server health check response
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HealthResponse {
-    pub status: String,
-    pub timestamp: DateTime<Utc>,
-    pub version: String,
-}
-
-/// Server statistics
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StatsResponse {
-    pub total_notes: u64,
-    pub total_tags: u64,
-    pub notes_per_tag: Vec<TagStats>,
-}
-
-/// Statistics for a specific tag
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TagStats {
-    #[serde(serialize_with = "serialize_note_tag", deserialize_with = "deserialize_note_tag")]
-    pub tag: NoteTag,
-    pub note_count: u64,
-    pub last_activity: Option<DateTime<Utc>>,
-}
-
-#[allow(clippy::trivially_copy_pass_by_ref)]
-fn serialize_note_tag<S>(tag: &NoteTag, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(&format!("{:08x}", tag.as_u32()))
-}
-
-fn deserialize_note_tag<'de, D>(deserializer: D) -> Result<NoteTag, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::de::Error;
-
-    let s = String::deserialize(deserializer)?;
-    u32::from_str_radix(&s, 16)
-        .map(std::convert::Into::into)
-        .map_err(|e| D::Error::custom(format!("Failed to parse NoteTag for u32: {e:?}")))
-}
-
 fn serialize_note_header<S>(note_header: &NoteHeader, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,

@@ -1,6 +1,6 @@
 # Miden Notes Private Transport
 
-Client and Server implementations.
+Client implementation.
 
 ## License
 This project is [MIT licensed](../../LICENSE).

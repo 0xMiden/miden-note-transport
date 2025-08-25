@@ -1,15 +1,11 @@
 use std::time::Duration;
 
 use miden_objects::account::AccountId;
-use miden_private_transport::{
-    Node, NodeConfig,
-    client::{
-        EncryptionStore, FilesystemEncryptionStore, TransportLayerClient, crypto::SerializableKey,
-        database::ClientDatabaseConfig, grpc::GrpcClient,
-    },
-    node::grpc::GrpcServerConfig,
-    types::mock_account_id,
+use miden_private_transport_client::{
+    EncryptionStore, FilesystemEncryptionStore, TransportLayerClient, crypto::SerializableKey,
+    database::ClientDatabaseConfig, grpc::GrpcClient, types::mock_account_id,
 };
+use miden_private_transport_node::{Node, NodeConfig, node::grpc::GrpcServerConfig};
 use rand::Rng;
 use tokio::{task::JoinHandle, time::sleep};
 
@@ -56,10 +52,7 @@ pub async fn test_client(
 
     encryption_store.add_key(&account_id, &key).unwrap();
 
-    let db_config = ClientDatabaseConfig {
-        database_path: "sqlite::memory:".to_string(),
-        ..Default::default()
-    };
+    let db_config = ClientDatabaseConfig::default();
     let client = TransportLayerClient::init(
         grpc_client,
         encryption_store,

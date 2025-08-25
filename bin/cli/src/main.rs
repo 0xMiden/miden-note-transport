@@ -3,15 +3,13 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use miden_objects::{account::AccountId, note::Note, utils::Deserializable};
-use miden_private_transport::{
-    Error, Result,
-    client::{
-        FilesystemEncryptionStore, TransportLayerClient,
-        crypto::{SerializableKey, aes::Aes256GcmKey},
-        database::ClientDatabaseConfig,
-        grpc::GrpcClient,
-    },
+use miden_private_transport_client::{
+    Error, FilesystemEncryptionStore, Result, TransportLayerClient,
+    crypto::{SerializableKey, aes::Aes256GcmKey},
+    database::ClientDatabaseConfig,
+    grpc::GrpcClient,
     logging::{OpenTelemetry, setup_tracing},
+    types::{NoteTag, mock_account_id, mock_note_p2id_with_accounts},
 };
 use tracing::info;
 
@@ -30,7 +28,7 @@ struct Args {
     timeout: u64,
 
     /// Database path for persistence
-    #[arg(long, default_value = "./cli-db.sqlite")]
+    #[arg(long, default_value = "cli-db.sqlite")]
     database: PathBuf,
 
     /// Keys directory
@@ -131,7 +129,7 @@ async fn main() -> Result<()> {
     info!("Database path: {:?}", args.database);
 
     let db_config = ClientDatabaseConfig {
-        database_path: args.database.to_string_lossy().to_string(),
+        url: args.database.to_string_lossy().to_string(),
         max_note_size: 1024 * 1024, // 1MB
     };
 
@@ -194,9 +192,8 @@ async fn send_note(
     data: &str,
     recipient_account_id: &str,
 ) -> Result<()> {
-    let bytes = hex::decode(data).map_err(|e| {
-        miden_private_transport::Error::InvalidNoteData(format!("Invalid hex data: {e}"))
-    })?;
+    let bytes =
+        hex::decode(data).map_err(|e| Error::InvalidNoteData(format!("Invalid hex data: {e}")))?;
 
     let note = Note::read_from_bytes(&bytes)
         .map_err(|e| Error::InvalidNoteData(format!("Failed to deserialize Note: {e}")))?;
@@ -252,9 +249,7 @@ async fn init(client: &mut TransportLayerClient, account_id: String, key: String
     client.add_account_id(&account_id);
     client.add_key(&serializable_key, &account_id).await?;
     // By default, register NoteTag derived from this Account Id
-    client
-        .register_tag(miden_private_transport::types::NoteTag::from_account_id(account_id), None)
-        .await?;
+    client.register_tag(NoteTag::from_account_id(account_id), None).await?;
 
     info!("Successfully initialized client with account {} and key", account_id);
 
@@ -354,16 +349,13 @@ fn mock_note(recipient: &str) -> Result<()> {
     use miden_objects::utils::Serializable;
     let account_id = AccountId::from_hex(recipient)
         .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
-    let note = miden_private_transport::types::mock_note_p2id_with_accounts(
-        miden_private_transport::types::mock_account_id(),
-        account_id,
-    );
+    let note = mock_note_p2id_with_accounts(mock_account_id(), account_id);
     let hex_note = hex::encode(note.to_bytes());
     info!("Test note: {}", hex_note);
     Ok(())
 }
 
 fn test_account_id() {
-    let account_id = miden_private_transport::types::mock_account_id();
+    let account_id = mock_account_id();
     println!("Test account ID: {account_id}");
 }

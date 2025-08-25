@@ -1,5 +1,5 @@
 [workspace]
-members  = ["bin/cli", "bin/node", "crates/proto", "crates/transport"]
+members  = ["bin/cli", "bin/node", "crates/client", "crates/node", "crates/proto"]
 resolver = "2"
 
 [workspace.package]
@@ -15,8 +15,9 @@ version      = "0.1.0"
 
 [workspace.dependencies]
 # Workspace crates (path-based dependencies)
-miden-private-transport       = { path = "crates/transport", version = "0.1" }
-miden-private-transport-proto = { path = "crates/proto", version = "0.1" }
+miden-private-transport-client = { path = "crates/client", version = "0.1" }
+miden-private-transport-node   = { path = "crates/node", version = "0.1" }
+miden-private-transport-proto  = { path = "crates/proto", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
 

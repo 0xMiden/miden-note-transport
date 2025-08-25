@@ -1,11 +1,11 @@
 [package]
 authors.workspace      = true
-description            = "Miden Private Notes Transport"
+description            = "Miden Private Notes Transport Client"
 edition.workspace      = true
 homepage.workspace     = true
 keywords               = ["messaging", "miden"]
 license.workspace      = true
-name                   = "miden-private-transport"
+name                   = "miden-private-transport-client"
 readme                 = "README.md"
 repository.workspace   = true
 rust-version.workspace = true
@@ -18,8 +18,8 @@ workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-# Proto crate
-miden-private-transport-proto.workspace = true
+# Proto
+miden-private-transport-proto = { workspace = true }
 
 # Miden
 miden-lib     = "0.10"
@@ -67,4 +67,5 @@ async-trait = "0.1"
 chrono = { features = ["serde"], version = "0.4" }
 
 [dev-dependencies]
-serial_test = "3.2"
+miden-private-transport-node = { workspace = true }
+serial_test                  = "3.2"
