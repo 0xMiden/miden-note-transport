@@ -18,9 +18,12 @@ pub struct MetricsGrpc {
     // send_note()
     send_note_count: Counter<u64>,
     send_note_duration: Histogram<f64>,
+    send_note_note_size: Histogram<u64>,
     // fetch_notes()
     fetch_notes_count: Counter<u64>,
     fetch_notes_duration: Histogram<f64>,
+    fetch_notes_replied_notes_number: Histogram<u64>,
+    fetch_notes_replied_notes_size: Histogram<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +63,12 @@ impl MetricsGrpc {
             .with_unit("s")
             .build();
 
+        let send_note_note_size = meter
+            .u64_histogram("grpc_send_note_note_size")
+            .with_description("Size of incoming note in send_note() requests in bytes")
+            .with_unit("B")
+            .build();
+
         let fetch_notes_count = meter
             .u64_counter("grpc_fetch_notes_count")
             .with_description("Total number of gRPC fetch_notes() requests")
@@ -70,34 +79,64 @@ impl MetricsGrpc {
             .with_description("Duration of gRPC fetch_notes() requests in seconds")
             .with_unit("s")
             .build();
+
+        let fetch_notes_replied_notes_number = meter
+            .u64_histogram("grpc_fetch_notes_replied_notes_number")
+            .with_description("Number of replied notes per gRPC fetch_notes() request")
+            .build();
+
+        let fetch_notes_replied_notes_size = meter
+            .u64_histogram("grpc_fetch_notes_replied_notes_size")
+            .with_description("Total size of replied notes per gRPC fetch_notes() request in bytes")
+            .with_unit("B")
+            .build();
+
         Self {
             send_note_count,
             send_note_duration,
+            send_note_note_size,
             fetch_notes_count,
             fetch_notes_duration,
+            fetch_notes_replied_notes_number,
+            fetch_notes_replied_notes_size,
         }
     }
 
     /// Measure a send-note request
     ///
-    /// Increases the request counter and measures request duration.
-    pub fn grpc_send_note(&self) -> RequestTimer<'_> {
-        let operation = "grpc.send_note";
+    /// Increases the request counter, records note size, and measures request duration.
+    pub fn grpc_send_note_request(&self, size_b: u64) -> RequestTimer<'_> {
+        let operation = "grpc.send_note.request";
+
+        self.send_note_note_size
+            .record(size_b, &[KeyValue::new("operation", operation.to_string())]);
+
         let counter = &self.send_note_count;
         let histogram = &self.send_note_duration;
-
         request_count_measure(operation, counter, histogram)
     }
 
     /// Measure a fetch-notes request
     ///
     /// Increases the request counter and measures request duration.
-    pub fn grpc_fetch_notes(&self) -> RequestTimer<'_> {
+    pub fn grpc_fetch_notes_request(&self) -> RequestTimer<'_> {
         let operation = "grpc.fetch_notes";
         let counter = &self.fetch_notes_count;
         let histogram = &self.fetch_notes_duration;
 
         request_count_measure(operation, counter, histogram)
+    }
+
+    /// Measure a fetch-notes response
+    ///
+    /// Records number and size of replied notes.
+    pub fn grpc_fetch_notes_response(&self, number: u64, size_b: u64) {
+        let operation = "grpc.fetch_notes.response";
+
+        self.fetch_notes_replied_notes_number
+            .record(number, &[KeyValue::new("operation", operation.to_string())]);
+        self.fetch_notes_replied_notes_size
+            .record(size_b, &[KeyValue::new("operation", operation.to_string())]);
     }
 }
 

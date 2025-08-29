@@ -58,15 +58,15 @@ impl GrpcServer {
 impl miden_private_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
     for GrpcServer
 {
-    #[tracing::instrument(skip(self), fields(operation = "grpc.send_note"))]
+    #[tracing::instrument(skip(self), fields(operation = "grpc.send_note.request"))]
     async fn send_note(
         &self,
         request: tonic::Request<SendNoteRequest>,
     ) -> Result<tonic::Response<SendNoteResponse>, tonic::Status> {
-        let timer = self.metrics.grpc_send_note();
-
         let request_data = request.into_inner();
         let note = request_data.note.ok_or_else(|| tonic::Status::invalid_argument("Missing note"))?;
+
+        let timer = self.metrics.grpc_send_note_request((note.header.len() + note.encrypted_details.len()) as u64);
 
         // Validate note size
         if note.encrypted_details.len() > self.config.max_note_size {
@@ -100,12 +100,12 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         }))
     }
 
-    #[tracing::instrument(skip(self), fields(operation = "grpc.fetch_notes"))]
+    #[tracing::instrument(skip(self), fields(operation = "grpc.fetch_notes.request"))]
     async fn fetch_notes(
         &self,
         request: tonic::Request<FetchNotesRequest>,
     ) -> Result<tonic::Response<FetchNotesResponse>, tonic::Status> {
-        let timer = self.metrics.grpc_fetch_notes();
+        let timer = self.metrics.grpc_fetch_notes_request();
 
         let request_data = request.into_inner();
         let tag = request_data.tag;
@@ -150,6 +150,11 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         let proto_notes = proto_notes?;
 
         timer.finish("ok");
+
+        self.metrics.grpc_fetch_notes_response(
+            proto_notes.len() as u64,
+            proto_notes.iter().map(|note| (note.header.len() + note.encrypted_details.len()) as u64).sum()
+        );
 
         Ok(tonic::Response::new(FetchNotesResponse { notes: proto_notes }))
     }
