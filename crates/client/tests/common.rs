@@ -7,8 +7,6 @@ use miden_private_transport_client::{
 use miden_private_transport_node::{Node, NodeConfig, node::grpc::GrpcServerConfig};
 use tokio::{task::JoinHandle, time::sleep};
 
-pub const TAG_LOCALANY: u32 = 0xc000_0000;
-
 pub async fn spawn_test_server(port: u16) -> JoinHandle<()> {
     let config = NodeConfig {
         grpc: GrpcServerConfig { port, ..Default::default() },

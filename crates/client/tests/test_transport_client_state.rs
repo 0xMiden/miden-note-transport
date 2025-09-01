@@ -15,7 +15,7 @@ async fn test_transport_client_note_fetch_tracking()
     let (mut client0, adr0) = test_client(port).await;
     let (mut client1, adr1) = test_client(port).await;
 
-    let tag = TAG_LOCALANY.into();
+    let tag = adr1.to_note_tag();
 
     // Create and send a note
     let note = mock_note_p2id_with_tag_and_addresses(tag, &adr0, &adr1);

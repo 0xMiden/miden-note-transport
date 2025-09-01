@@ -6,6 +6,8 @@ use miden_private_transport_client::types::{
 
 use self::common::*;
 
+pub const TAG_LOCALANY: u32 = 0xc000_0000;
+
 #[tokio::test]
 async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let port = 9627;
@@ -56,13 +58,13 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
     let header1 = *note1.header();
 
     // Send Note0
-    let send_response = client0.send_note(note0, Some(&adr2)).await?;
+    let send_response = client0.send_note(note0, None).await?;
     let (id, status) = send_response;
     assert_eq!(id, header0.id());
     assert_eq!(status, NoteStatus::Sent);
 
     // Send Note1
-    let send_response = client1.send_note(note1, Some(&adr2)).await?;
+    let send_response = client1.send_note(note1, None).await?;
     let (id, status) = send_response;
     assert_eq!(id, header1.id());
     assert_eq!(status, NoteStatus::Sent);
