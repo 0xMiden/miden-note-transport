@@ -22,7 +22,7 @@ miden-private-transport-proto  = { path = "crates/proto", version = "0.1" }
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
 
 # Other miden dependencies. These should align with those expected by miden-base.
-miden-objects = { features = ["testing"], version = "0.10" }
+miden-objects = { features = ["testing"], version = "0.11.1" }
 
 # External dependencies
 anyhow             = { version = "1.0" }
@@ -30,7 +30,7 @@ base64             = { version = "0.22" }
 clap               = { features = ["derive"], version = "4.5" }
 hex                = { version = "0.4" }
 thiserror          = { default-features = false, version = "2.0" }
-tokio              = { version = "1.46" }
+tokio              = { version = "1.47" }
 tonic              = { version = "0.13" }
 tracing            = { version = "0.1" }
 tracing-subscriber = { features = ["env-filter", "fmt", "json"], version = "0.3" }

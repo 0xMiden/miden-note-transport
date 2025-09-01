@@ -1,6 +1,6 @@
+// Re-export miden-objects
 use chrono::{DateTime, Utc};
 use miden_lib::{account::wallets::BasicWallet, note::create_p2id_note};
-// Use miden-objects
 pub use miden_objects::{
     Felt,
     account::AccountId,
@@ -8,6 +8,7 @@ pub use miden_objects::{
     note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
 };
 use miden_objects::{
+    Word,
     account::{AccountBuilder, AccountStorageMode},
     crypto::rand::RpoRandomCoin,
 };
@@ -67,26 +68,23 @@ where
 }
 
 pub fn random_note_id() -> NoteId {
-    use miden_objects::{Digest, Felt, Word};
+    use miden_objects::{Felt, Word};
     use rand::Rng;
 
     let mut rng = rand::rng();
 
-    let recipient_word = Word::from([
+    let recipient = Word::from([
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
     ]);
-    let asset_commitment_word = Word::from([
+    let asset_commitment = Word::from([
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
     ]);
-
-    let recipient = Digest::from(recipient_word);
-    let asset_commitment = Digest::from(asset_commitment_word);
 
     NoteId::new(recipient, asset_commitment)
 }
@@ -127,7 +125,7 @@ pub fn mock_note_p2id() -> miden_objects::note::Note {
         .with_auth_component(Auth::BasicAuth)
         .build()
         .unwrap();
-    let mut rng = RpoRandomCoin::new(Default::default());
+    let mut rng = RpoRandomCoin::new(Word::default());
     create_p2id_note(sender.id(), target.id(), vec![], NoteType::Private, Felt::default(), &mut rng)
         .unwrap()
 }
@@ -137,7 +135,7 @@ pub fn mock_note_p2id_with_accounts(
     sender_id: miden_objects::account::AccountId,
     target_id: miden_objects::account::AccountId,
 ) -> miden_objects::note::Note {
-    let mut rng = RpoRandomCoin::new(Default::default());
+    let mut rng = RpoRandomCoin::new(Word::default());
     create_p2id_note(sender_id, target_id, vec![], NoteType::Private, Felt::default(), &mut rng)
         .unwrap()
 }
@@ -158,7 +156,7 @@ pub fn mock_note_p2id_with_tag_and_accounts(
 
     let mut randrng = rand::rng();
     let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
-    let mut rng = RpoRandomCoin::new(seed);
+    let mut rng = RpoRandomCoin::new(seed.into());
     let serial_num = rng.draw_word();
     let recipient = miden_lib::note::utils::build_p2id_recipient(target, serial_num).unwrap();
 

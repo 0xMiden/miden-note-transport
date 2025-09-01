@@ -47,26 +47,23 @@ where
 }
 
 pub fn random_note_id() -> NoteId {
-    use miden_objects::{Digest, Felt, Word};
+    use miden_objects::{Felt, Word};
     use rand::Rng;
 
     let mut rng = rand::rng();
 
-    let recipient_word = Word::from([
+    let recipient = Word::from([
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
     ]);
-    let asset_commitment_word = Word::from([
+    let asset_commitment = Word::from([
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
         Felt::new(rng.random::<u64>()),
     ]);
-
-    let recipient = Digest::from(recipient_word);
-    let asset_commitment = Digest::from(asset_commitment_word);
 
     NoteId::new(recipient, asset_commitment)
 }

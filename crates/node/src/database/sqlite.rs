@@ -61,7 +61,7 @@ impl DatabaseBackend for SqliteDatabase {
             VALUES (?, ?, ?, ?, ?)
             ",
         )
-        .bind(&note.header.id().inner().as_bytes()[..])
+        .bind(&note.header.id().as_bytes()[..])
         .bind(i64::from(note.header.metadata().tag().as_u32()))
         .bind(note.header.to_bytes())
         .bind(&note.details)
@@ -154,7 +154,7 @@ impl DatabaseBackend for SqliteDatabase {
             SELECT COUNT(*) FROM notes WHERE id = ?
             ",
         )
-        .bind(&note_id.inner().as_bytes()[..])
+        .bind(&note_id.as_bytes()[..])
         .fetch_one(&self.pool)
         .await?;
 

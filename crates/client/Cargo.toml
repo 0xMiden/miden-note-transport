@@ -22,9 +22,9 @@ path = "src/lib.rs"
 miden-private-transport-proto = { workspace = true }
 
 # Miden
-miden-lib     = "0.10"
+miden-lib     = "0.11.1"
 miden-objects = { workspace = true }
-miden-testing = "0.10"
+miden-testing = "0.11.1"
 
 # gRPC server and client
 tokio = { workspace = true }

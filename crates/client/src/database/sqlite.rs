@@ -107,7 +107,7 @@ impl DatabaseBackend for SqliteDatabase {
             VALUES (?, ?, ?, ?, ?)
             ",
         )
-        .bind(&note_id.inner().as_bytes()[..])
+        .bind(&note_id.as_bytes()[..])
         .bind(i64::from(tag.as_u32()))
         .bind(&header_bytes)
         .bind(details)
@@ -125,7 +125,7 @@ impl DatabaseBackend for SqliteDatabase {
             FROM stored_notes WHERE note_id = ?
             ",
         )
-        .bind(&note_id.inner().as_bytes()[..])
+        .bind(&note_id.as_bytes()[..])
         .fetch_optional(&self.pool)
         .await?;
 
@@ -203,7 +203,7 @@ impl DatabaseBackend for SqliteDatabase {
             VALUES (?, ?, ?)
             ",
         )
-        .bind(&note_id.inner().as_bytes()[..])
+        .bind(&note_id.as_bytes()[..])
         .bind(i64::from(tag.as_u32()))
         .bind(now.to_rfc3339())
         .execute(&self.pool)
@@ -218,7 +218,7 @@ impl DatabaseBackend for SqliteDatabase {
             SELECT 1 FROM fetched_notes WHERE note_id = ?
             ",
         )
-        .bind(&note_id.inner().as_bytes()[..])
+        .bind(&note_id.as_bytes()[..])
         .fetch_optional(&self.pool)
         .await?;
 
