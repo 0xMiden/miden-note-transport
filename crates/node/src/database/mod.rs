@@ -4,7 +4,7 @@ mod sqlite;
 use chrono::{DateTime, Utc};
 
 pub use self::maintenance::DatabaseMaintenance;
-use self::sqlite::SQLiteDB;
+use self::sqlite::SqliteDatabase;
 use crate::{
     Result,
     metrics::MetricsDatabase,
@@ -64,7 +64,7 @@ impl Default for DatabaseConfig {
 impl Database {
     /// Connect to a database (with `SQLite` backend)
     pub async fn connect(config: DatabaseConfig, metrics: MetricsDatabase) -> Result<Self> {
-        let backend = SQLiteDB::connect(config, metrics).await?;
+        let backend = SqliteDatabase::connect(config, metrics).await?;
         Ok(Self { backend: Box::new(backend) })
     }
 
@@ -117,10 +117,8 @@ mod tests {
 
         let note = StoredNote {
             header: test_note_header(),
-            encrypted_data: vec![1, 2, 3, 4],
+            details: vec![1, 2, 3, 4],
             created_at: Utc::now(),
-            received_at: Utc::now(),
-            received_by: None,
         };
 
         db.store_note(&note).await.unwrap();
@@ -148,10 +146,8 @@ mod tests {
         let received_time = Utc::now();
         let note = StoredNote {
             header: test_note_header(),
-            encrypted_data: vec![1, 2, 3, 4],
+            details: vec![1, 2, 3, 4],
             created_at: received_time,
-            received_at: received_time,
-            received_by: None,
         };
 
         db.store_note(&note).await.unwrap();

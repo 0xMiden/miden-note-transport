@@ -4,8 +4,10 @@ use chrono::{DateTime, Utc};
 use miden_objects::utils::{Deserializable, Serializable};
 use miden_private_transport_proto::miden_private_transport::{
     FetchNotesRequest, FetchNotesResponse, HealthResponse, SendNoteRequest, SendNoteResponse,
-    StatsResponse, miden_private_transport_server::MidenPrivateTransportServer,
+    StatsResponse, TransportNote, TransportNoteTimestamped,
+    miden_private_transport_server::MidenPrivateTransportServer,
 };
+use tonic::Status;
 
 use crate::{database::Database, metrics::MetricsGrpc};
 
@@ -64,28 +66,24 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         request: tonic::Request<SendNoteRequest>,
     ) -> Result<tonic::Response<SendNoteResponse>, tonic::Status> {
         let request_data = request.into_inner();
-        let note = request_data.note.ok_or_else(|| tonic::Status::invalid_argument("Missing note"))?;
+        let pnote = request_data.note.ok_or_else(|| Status::invalid_argument("Missing note"))?;
 
-        let timer = self.metrics.grpc_send_note_request((note.header.len() + note.encrypted_details.len()) as u64);
+        let timer = self.metrics.grpc_send_note_request((pnote.header.len() + pnote.details.len()) as u64);
 
         // Validate note size
-        if note.encrypted_details.len() > self.config.max_note_size {
-            return Err(tonic::Status::resource_exhausted(format!("Note too large ({})", note.encrypted_details.len())));
+        if pnote.details.len() > self.config.max_note_size {
+            return Err(Status::resource_exhausted(format!("Note too large ({})", pnote.details.len())));
         }
 
         // Convert protobuf request to internal types
-        let header = miden_objects::note::NoteHeader::read_from_bytes(&note.header)
-            .map_err(|e| {
-                tonic::Status::invalid_argument(format!("Invalid header: {e:?}"))
-            })?;
+        let header = miden_objects::note::NoteHeader::read_from_bytes(&pnote.header)
+            .map_err(|e| Status::invalid_argument(format!("Invalid header: {e:?}")))?;
 
         // Create note for database
         let note_for_db = crate::types::StoredNote {
             header,
-            encrypted_data: note.encrypted_details,
+            details: pnote.details,
             created_at: Utc::now(),
-            received_at: Utc::now(),
-            received_by: None,
         };
 
         self.database
@@ -129,21 +127,29 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
             .await.map_err(|e| tonic::Status::internal(format!("Failed to fetch notes: {e:?}")))?;
 
         // Convert to protobuf format
+        let mut proto_notes_size = 0;
         let proto_notes: Result<Vec<_>, tonic::Status> = notes
             .into_iter()
             .map(|note| {
-                let nanos = note.received_at.timestamp_subsec_nanos();
+                let nanos = note.created_at.timestamp_subsec_nanos();
                 let nanos_i32 = nanos
                     .try_into()
                     .map_err(|_| tonic::Status::internal("Timestamp nanoseconds too large".to_string()))?;
 
-                Ok(miden_private_transport_proto::miden_private_transport::EncryptedNoteTimestamped {
+                let pnote = TransportNote {
                     header: note.header.to_bytes(),
-                    encrypted_details: note.encrypted_data,
-                    timestamp: Some(prost_types::Timestamp {
-                        seconds: note.received_at.timestamp(),
+                    details: note.details,
+                };
+
+                let ptimestamp = prost_types::Timestamp {
+                        seconds: note.created_at.timestamp(),
                         nanos: nanos_i32,
-                    }),
+                    };
+
+                proto_notes_size += (pnote.header.len() + pnote.details.len()) as u64;
+                Ok(TransportNoteTimestamped {
+                    note: Some(pnote),
+                    timestamp: Some(ptimestamp),
                 })
             })
             .collect();
@@ -153,7 +159,7 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
 
         self.metrics.grpc_fetch_notes_response(
             proto_notes.len() as u64,
-            proto_notes.iter().map(|note| (note.header.len() + note.encrypted_details.len()) as u64).sum()
+            proto_notes_size,
         );
 
         Ok(tonic::Response::new(FetchNotesResponse { notes: proto_notes }))
