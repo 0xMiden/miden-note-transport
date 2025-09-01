@@ -7,6 +7,7 @@ pub mod types;
 // Re-exports
 use miden_objects::{
     address::Address,
+    note::NoteMetadata,
     utils::{Deserializable, Serializable},
 };
 
@@ -54,11 +55,22 @@ impl TransportLayerClient {
     }
 
     /// Send a note to a recipient
+    ///
+    /// If the note tag in the provided note is different than the recipient's [`Address`] note tag,
+    /// the provided note' tag is updated.
     pub async fn send_note(
         &mut self,
-        note: Note,
-        _address: &Address,
+        mut note: Note,
+        address: Option<&Address>,
     ) -> Result<(NoteId, NoteStatus)> {
+        // Use the address note tag, if provided
+        if let Some(addr) = address {
+            let new_tag = addr.to_note_tag();
+            // Update tag
+            if new_tag != note.metadata().tag() {
+                note = note_with_tag(&note, new_tag)?;
+            }
+        }
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();
@@ -134,4 +146,20 @@ impl TransportLayerClient {
         // For now it does nothing.
         Ok(())
     }
+}
+
+fn note_with_tag(note: &Note, new_tag: NoteTag) -> Result<Note> {
+    let header = *note.header();
+    let details: NoteDetails = note.into();
+
+    let metadata = NoteMetadata::new(
+        header.metadata().sender(),
+        header.metadata().note_type(),
+        new_tag,
+        header.metadata().execution_hint(),
+        header.metadata().aux(),
+    )
+    .map_err(|e| Error::InvalidTag(format!("Invalid new tag {new_tag}: {e}")))?;
+
+    Ok(Note::new(details.assets().clone(), metadata, details.recipient().clone()))
 }

@@ -19,7 +19,7 @@ async fn test_transport_client_note_fetch_tracking()
 
     // Create and send a note
     let note = mock_note_p2id_with_tag_and_addresses(tag, &adr0, &adr1);
-    let (note_id, status) = client0.send_note(note, &adr1).await.unwrap();
+    let (note_id, status) = client0.send_note(note, Some(&adr1)).await.unwrap();
     assert!(matches!(status, NoteStatus::Sent));
 
     // Test note fetching recording
@@ -45,7 +45,7 @@ async fn test_transport_client_note_storage() -> std::result::Result<(), Box<dyn
 
     // Send a note
     let note = mock_note_p2id_with_addresses(&adr0, &adr1);
-    let (note_id, note_status) = client0.send_note(note, &adr1).await.unwrap();
+    let (note_id, note_status) = client0.send_note(note, Some(&adr1)).await.unwrap();
     assert!(matches!(note_status, NoteStatus::Sent));
 
     // Fetch

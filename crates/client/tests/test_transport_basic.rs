@@ -19,7 +19,7 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
     let note = mock_note_p2id_with_addresses(&adr0, &adr1);
     let header = *note.header();
 
-    let send_response = client0.send_note(note, &adr1).await?;
+    let send_response = client0.send_note(note, Some(&adr1)).await?;
     let (id, status) = send_response;
     assert_eq!(id, header.id());
     assert_eq!(status, NoteStatus::Sent);
@@ -56,13 +56,13 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
     let header1 = *note1.header();
 
     // Send Note0
-    let send_response = client0.send_note(note0, &adr2).await?;
+    let send_response = client0.send_note(note0, Some(&adr2)).await?;
     let (id, status) = send_response;
     assert_eq!(id, header0.id());
     assert_eq!(status, NoteStatus::Sent);
 
     // Send Note1
-    let send_response = client1.send_note(note1, &adr2).await?;
+    let send_response = client1.send_note(note1, Some(&adr2)).await?;
     let (id, status) = send_response;
     assert_eq!(id, header1.id());
     assert_eq!(status, NoteStatus::Sent);

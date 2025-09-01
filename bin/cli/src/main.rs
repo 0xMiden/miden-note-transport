@@ -151,7 +151,7 @@ async fn send_note(
         .map_err(|e| anyhow!("Invalid recipient address {recipient_address_bech32}: {e}"))?;
 
     // Send the note
-    client.send_note(note, &address).await?;
+    client.send_note(note, Some(&address)).await?;
     info!("Note sent successfully");
 
     Ok(())
