@@ -10,6 +10,7 @@ pub use miden_objects::{
 use miden_objects::{
     Word,
     account::{AccountBuilder, AccountStorageMode},
+    address::{AccountIdAddress, Address, AddressInterface},
     crypto::rand::RpoRandomCoin,
 };
 use miden_testing::Auth;
@@ -110,7 +111,7 @@ pub fn test_note_header() -> NoteHeader {
     NoteHeader::new(id, metadata)
 }
 
-pub fn mock_note_p2id() -> miden_objects::note::Note {
+pub fn mock_note_p2id() -> Note {
     use rand::Rng;
     let mut rng = rand::rng();
     let (sender, _seed) = AccountBuilder::new(rng.random())
@@ -131,20 +132,22 @@ pub fn mock_note_p2id() -> miden_objects::note::Note {
 }
 
 /// Create a mock P2ID note with specified sender and target account IDs
-pub fn mock_note_p2id_with_accounts(
-    sender_id: miden_objects::account::AccountId,
-    target_id: miden_objects::account::AccountId,
+pub fn mock_note_p2id_with_addresses(
+    sender: &Address,
+    target: &Address,
 ) -> miden_objects::note::Note {
     let mut rng = RpoRandomCoin::new(Word::default());
+    let sender_id = address_to_account_id(sender).unwrap();
+    let target_id = address_to_account_id(target).unwrap();
     create_p2id_note(sender_id, target_id, vec![], NoteType::Private, Felt::default(), &mut rng)
         .unwrap()
 }
 
-pub fn mock_note_p2id_with_tag_and_accounts(
+pub fn mock_note_p2id_with_tag_and_addresses(
     tag: NoteTag,
-    sender: AccountId,
-    target: AccountId,
-) -> miden_objects::note::Note {
+    sender: &Address,
+    target: &Address,
+) -> Note {
     use miden_objects::{
         Felt,
         asset::{Asset, FungibleAsset},
@@ -158,10 +161,12 @@ pub fn mock_note_p2id_with_tag_and_accounts(
     let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
     let mut rng = RpoRandomCoin::new(seed.into());
     let serial_num = rng.draw_word();
-    let recipient = miden_lib::note::utils::build_p2id_recipient(target, serial_num).unwrap();
+    let sender_id = address_to_account_id(sender).unwrap();
+    let target_id = address_to_account_id(target).unwrap();
+    let recipient = miden_lib::note::utils::build_p2id_recipient(target_id, serial_num).unwrap();
 
     let metadata = NoteMetadata::new(
-        sender,
+        sender_id,
         NoteType::Private,
         tag,
         NoteExecutionHint::always(),
@@ -177,7 +182,7 @@ pub fn mock_note_p2id_with_tag_and_accounts(
 }
 
 /// Create a mock account ID for testing purposes
-pub fn mock_account_id() -> miden_objects::account::AccountId {
+pub fn mock_account_id() -> AccountId {
     use rand::Rng;
     let mut rng = rand::rng();
     let (account, _seed) = AccountBuilder::new(rng.random())
@@ -187,4 +192,18 @@ pub fn mock_account_id() -> miden_objects::account::AccountId {
         .build()
         .unwrap();
     account.id()
+}
+
+/// Create a mock address for testing purposes
+pub fn mock_address() -> Address {
+    Address::AccountId(AccountIdAddress::new(mock_account_id(), AddressInterface::BasicWallet))
+}
+
+/// Get underlying account ID of an `Address::AccountId`
+pub fn address_to_account_id(address: &Address) -> Option<AccountId> {
+    if let Address::AccountId(aia) = address {
+        Some(aia.id())
+    } else {
+        None
+    }
 }
