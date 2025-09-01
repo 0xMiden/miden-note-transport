@@ -1,8 +1,7 @@
 mod common;
 
-use miden_objects::note::NoteTag;
 use miden_private_transport_client::types::{
-    NoteStatus, mock_note_p2id_with_accounts, mock_note_p2id_with_tag_and_accounts,
+    NoteStatus, mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
 };
 
 use self::common::*;
@@ -13,14 +12,14 @@ async fn test_transport_client_note_fetch_tracking()
     let port = 9728;
     let handle = spawn_test_server(port).await;
 
-    let (mut client0, accid0) = test_client(port).await;
-    let (mut client1, accid1) = test_client(port).await;
+    let (mut client0, adr0) = test_client(port).await;
+    let (mut client1, adr1) = test_client(port).await;
 
-    let tag = TAG_LOCALANY.into();
+    let tag = adr1.to_note_tag();
 
     // Create and send a note
-    let note = mock_note_p2id_with_tag_and_accounts(tag, accid0, accid1);
-    let (note_id, status) = client0.send_note(note, &accid1).await.unwrap();
+    let note = mock_note_p2id_with_tag_and_addresses(tag, &adr0, &adr1);
+    let (note_id, status) = client0.send_note(note, Some(&adr1)).await.unwrap();
     assert!(matches!(status, NoteStatus::Sent));
 
     // Test note fetching recording
@@ -41,16 +40,16 @@ async fn test_transport_client_note_storage() -> std::result::Result<(), Box<dyn
     let port = 9730;
     let handle = spawn_test_server(port).await;
 
-    let (mut client0, accid0) = test_client(port).await;
-    let (mut client1, accid1) = test_client(port).await;
+    let (mut client0, adr0) = test_client(port).await;
+    let (mut client1, adr1) = test_client(port).await;
 
     // Send a note
-    let note = mock_note_p2id_with_accounts(accid0, accid1);
-    let (note_id, note_status) = client0.send_note(note, &accid1).await.unwrap();
+    let note = mock_note_p2id_with_addresses(&adr0, &adr1);
+    let (note_id, note_status) = client0.send_note(note, Some(&adr1)).await.unwrap();
     assert!(matches!(note_status, NoteStatus::Sent));
 
     // Fetch
-    let sent_tag = NoteTag::from_account_id(accid1);
+    let sent_tag = adr1.to_note_tag();
     let fetched_notes = client1.fetch_notes(sent_tag).await.unwrap();
     assert_eq!(fetched_notes.len(), 1);
 

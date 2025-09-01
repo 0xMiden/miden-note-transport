@@ -2,13 +2,13 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
-use miden_objects::{account::AccountId, note::Note, utils::Deserializable};
+use miden_objects::{account::NetworkId, address::Address, note::Note, utils::Deserializable};
 use miden_private_transport_client::{
     Error, Result, TransportLayerClient,
     database::DatabaseConfig,
     grpc::GrpcClient,
     logging::{OpenTelemetry, setup_tracing},
-    types::{NoteTag, mock_account_id, mock_note_p2id_with_accounts},
+    types::{mock_address, mock_note_p2id_with_addresses},
 };
 use tracing::info;
 
@@ -42,9 +42,9 @@ enum Commands {
         #[arg(long)]
         note: String,
 
-        /// Recipient's account ID
+        /// Recipient's address (bech32)
         #[arg(long)]
-        account_id: String,
+        recipient: String,
     },
 
     /// Fetch notes for a tag
@@ -54,11 +54,11 @@ enum Commands {
         tag: u32,
     },
 
-    /// Initialize the client with an account
+    /// Initialize the client with an address
     Init {
-        /// Listening account ID
+        /// Listening address (bech32)
         #[arg(long)]
-        account_id: String,
+        address: String,
     },
 
     /// Clean up old data
@@ -81,8 +81,8 @@ enum Commands {
         recipient: String,
     },
 
-    /// Random account ID for testing purposes
-    TestAccountId,
+    /// Random address (bech32) for testing purposes
+    TestAddress,
 }
 
 #[tokio::main]
@@ -107,14 +107,14 @@ async fn main() -> Result<()> {
     let mut client = TransportLayerClient::init(Box::new(grpc), vec![], Some(db_config)).await?;
 
     match args.command {
-        Commands::Send { note, account_id } => {
-            send_note(&mut client, &note, &account_id).await?;
+        Commands::Send { note, recipient } => {
+            send_note(&mut client, &note, &recipient).await?;
         },
         Commands::Fetch { tag } => {
             fetch_notes(&mut client, tag).await?;
         },
-        Commands::Init { account_id } => {
-            init(&mut client, &account_id)?;
+        Commands::Init { address } => {
+            init(&mut client, &address)?;
         },
         Commands::Cleanup { days } => {
             cleanup_old_data(&client, days).await?;
@@ -126,8 +126,8 @@ async fn main() -> Result<()> {
         Commands::TestNote { recipient } => {
             mock_note(&recipient)?;
         },
-        Commands::TestAccountId => {
-            test_account_id();
+        Commands::TestAddress => {
+            test_address();
         },
     }
 
@@ -137,7 +137,7 @@ async fn main() -> Result<()> {
 async fn send_note(
     client: &mut TransportLayerClient,
     data: &str,
-    recipient_account_id: &str,
+    recipient_address_bech32: &str,
 ) -> Result<()> {
     let bytes =
         hex::decode(data).map_err(|e| Error::InvalidNoteData(format!("Invalid hex data: {e}")))?;
@@ -147,18 +147,17 @@ async fn send_note(
 
     info!("Sending note to tag {}", note.header().metadata().tag());
 
-    let account_id = AccountId::from_hex(recipient_account_id)
-        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+    let (_, address) = Address::from_bech32(recipient_address_bech32)
+        .map_err(|e| anyhow!("Invalid recipient address {recipient_address_bech32}: {e}"))?;
+
     // Send the note
-    client.send_note(note, &account_id).await?;
+    client.send_note(note, Some(&address)).await?;
     info!("Note sent successfully");
 
     Ok(())
 }
 
 async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> {
-    info!("Fetching notes for tag {}", tag);
-
     // Fetch notes
     let decrypted_notes = client.fetch_notes(tag.into()).await?;
 
@@ -171,15 +170,16 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> 
     Ok(())
 }
 
-fn init(client: &mut TransportLayerClient, account_id: &str) -> Result<()> {
-    let account_id = AccountId::from_hex(account_id)
-        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
+fn init(client: &mut TransportLayerClient, address_bech32: &str) -> Result<()> {
+    let (_, address) = Address::from_bech32(address_bech32)
+        .map_err(|e| anyhow!("Invalid recipient address {address_bech32}: {e}"))?;
 
-    client.add_account_id(&account_id);
-    // By default, register NoteTag derived from this Account Id
-    client.register_tag(NoteTag::from_account_id(account_id))?;
+    let tag = address.to_note_tag();
+    client.add_address(address);
+    // By default, register NoteTag associated with this Address
+    client.register_tag(tag)?;
 
-    info!("Successfully initialized client with account {} and key", account_id);
+    info!("Successfully initialized client with address {address_bech32} (tag: {tag})");
 
     Ok(())
 }
@@ -199,17 +199,17 @@ async fn cleanup_old_data(client: &TransportLayerClient, days: u32) -> Result<()
     Ok(())
 }
 
-fn mock_note(recipient: &str) -> Result<()> {
+fn mock_note(recipient_address_bech32: &str) -> Result<()> {
     use miden_objects::utils::Serializable;
-    let account_id = AccountId::from_hex(recipient)
-        .map_err(|e| Error::Generic(anyhow!("Invalid recipient Account ID: {e}")))?;
-    let note = mock_note_p2id_with_accounts(mock_account_id(), account_id);
+    let (_, address) = Address::from_bech32(recipient_address_bech32)
+        .map_err(|e| anyhow!("Invalid recipient address {recipient_address_bech32}: {e}"))?;
+    let note = mock_note_p2id_with_addresses(&mock_address(), &address);
     let hex_note = hex::encode(note.to_bytes());
     info!("Test note: {}", hex_note);
     Ok(())
 }
 
-fn test_account_id() {
-    let account_id = mock_account_id();
-    println!("Test account ID: {account_id}");
+fn test_address() {
+    let address = mock_address();
+    println!("Test address: {}", address.to_bech32(NetworkId::Testnet));
 }

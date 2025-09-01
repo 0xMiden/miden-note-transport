@@ -1,13 +1,11 @@
 use std::time::Duration;
 
-use miden_objects::account::AccountId;
+use miden_objects::address::Address;
 use miden_private_transport_client::{
-    TransportLayerClient, database::DatabaseConfig, grpc::GrpcClient, types::mock_account_id,
+    TransportLayerClient, database::DatabaseConfig, grpc::GrpcClient, types::mock_address,
 };
 use miden_private_transport_node::{Node, NodeConfig, node::grpc::GrpcServerConfig};
 use tokio::{task::JoinHandle, time::sleep};
-
-pub const TAG_LOCALANY: u32 = 0xc000_0000;
 
 pub async fn spawn_test_server(port: u16) -> JoinHandle<()> {
     let config = NodeConfig {
@@ -22,18 +20,18 @@ pub async fn spawn_test_server(port: u16) -> JoinHandle<()> {
     handle
 }
 
-pub async fn test_client(port: u16) -> (TransportLayerClient, AccountId) {
+pub async fn test_client(port: u16) -> (TransportLayerClient, Address) {
     let timeout_ms = 1000;
     let url = format!("http://127.0.0.1:{port}");
 
     let grpc_client = Box::new(GrpcClient::connect(url, timeout_ms).await.unwrap());
 
-    let account_id = mock_account_id();
+    let address = mock_address();
 
     let db_config = DatabaseConfig::default();
-    let client = TransportLayerClient::init(grpc_client, vec![account_id], Some(db_config))
+    let client = TransportLayerClient::init(grpc_client, vec![address.clone()], Some(db_config))
         .await
         .unwrap();
 
-    (client, account_id)
+    (client, address)
 }

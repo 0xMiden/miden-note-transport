@@ -4,10 +4,10 @@ pub mod grpc;
 pub mod logging;
 pub mod types;
 
-use std::collections::HashMap;
-
+// Re-exports
 use miden_objects::{
-    account::AccountId,
+    address::Address,
+    note::NoteMetadata,
     utils::{Deserializable, Serializable},
 };
 
@@ -15,7 +15,6 @@ use self::{
     database::{Database, DatabaseConfig},
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
-// Re-exports
 pub use self::{
     error::{Error, Result},
     grpc::GrpcClient,
@@ -38,8 +37,8 @@ pub trait TransportClient: Send + Sync {
 /// Client for interacting with the transport layer
 pub struct TransportLayerClient {
     transport_client: Box<dyn TransportClient>,
-    /// Owned account IDs
-    account_ids: Vec<AccountId>,
+    /// Owned addresses
+    addresses: Vec<Address>,
     /// Client database for persistent state
     database: Database,
 }
@@ -47,27 +46,31 @@ pub struct TransportLayerClient {
 impl TransportLayerClient {
     pub async fn init(
         transport_client: Box<dyn TransportClient>,
-        account_ids: Vec<AccountId>,
+        addresses: Vec<Address>,
         database_config: Option<DatabaseConfig>,
     ) -> Result<Self> {
         let database = Database::new_sqlite(database_config.unwrap_or_default()).await?;
 
-        // Start with default tag mappings for owned account IDs
-        let mut tag_accid_map: HashMap<NoteTag, AccountId> =
-            account_ids.iter().map(|id| (NoteTag::from_account_id(*id), *id)).collect();
-
-        // Load existing tag mappings from database
-        if let Ok(existing_mappings) = database.get_all_tag_account_mappings().await {
-            for (tag, account_id) in existing_mappings {
-                tag_accid_map.insert(tag, account_id);
-            }
-        }
-
-        Ok(Self { transport_client, account_ids, database })
+        Ok(Self { transport_client, addresses, database })
     }
 
     /// Send a note to a recipient
-    pub async fn send_note(&mut self, note: Note, _id: &AccountId) -> Result<(NoteId, NoteStatus)> {
+    ///
+    /// If the note tag in the provided note is different than the recipient's [`Address`] note tag,
+    /// the provided note' tag is updated.
+    pub async fn send_note(
+        &mut self,
+        mut note: Note,
+        address: Option<&Address>,
+    ) -> Result<(NoteId, NoteStatus)> {
+        // Use the address note tag, if provided
+        if let Some(addr) = address {
+            let new_tag = addr.to_note_tag();
+            // Update tag
+            if new_tag != note.metadata().tag() {
+                note = note_with_tag(&note, new_tag)?;
+            }
+        }
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();
@@ -98,9 +101,9 @@ impl TransportLayerClient {
         Ok(decrypted_notes)
     }
 
-    /// Adds an ego account ID
-    pub fn add_account_id(&mut self, account_id: &AccountId) {
-        self.account_ids.push(*account_id);
+    /// Adds an owned address
+    pub fn add_address(&mut self, address: Address) {
+        self.addresses.push(address);
     }
 
     /// Check if a note has been fetched before
@@ -113,12 +116,12 @@ impl TransportLayerClient {
         self.database.get_fetched_notes_for_tag(tag).await
     }
 
-    /// Get an encrypted note from the database
+    /// Get an stored note from the database
     pub async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<database::StoredNote>> {
         self.database.get_stored_note(note_id).await
     }
 
-    /// Get all encrypted notes for a specific tag
+    /// Get all stored notes for a specific tag
     pub async fn get_stored_notes_for_tag(
         &self,
         tag: NoteTag,
@@ -143,4 +146,20 @@ impl TransportLayerClient {
         // For now it does nothing.
         Ok(())
     }
+}
+
+fn note_with_tag(note: &Note, new_tag: NoteTag) -> Result<Note> {
+    let header = *note.header();
+    let details: NoteDetails = note.into();
+
+    let metadata = NoteMetadata::new(
+        header.metadata().sender(),
+        header.metadata().note_type(),
+        new_tag,
+        header.metadata().execution_hint(),
+        header.metadata().aux(),
+    )
+    .map_err(|e| Error::InvalidTag(format!("Invalid new tag {new_tag}: {e}")))?;
+
+    Ok(Note::new(details.assets().clone(), metadata, details.recipient().clone()))
 }
