@@ -99,7 +99,7 @@ impl TransportLayerClient {
         Ok(decrypted_notes)
     }
 
-    /// Continously fetch notes
+    /// Continuously fetch notes
     pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
         self.transport_client.stream_notes(tag).await
     }
