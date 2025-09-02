@@ -19,7 +19,7 @@ workspace = true
 [dependencies]
 anyhow                         = { workspace = true }
 clap                           = { workspace = true }
-futures                        = "0.3"
+futures                        = { workspace = true }
 hex                            = { workspace = true }
 miden-objects                  = { workspace = true }
 miden-private-transport-client = { workspace = true }

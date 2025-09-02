@@ -102,17 +102,25 @@ impl NoteStreamerManager {
         &mut self,
         tag_notes: Vec<(NoteTag, Vec<TransportNoteTimestamped>)>,
     ) {
+        let mut remove_subs = vec![];
         // Forward updates to subs
         for (tag, notes) in tag_notes {
             if let Some(tag_data) = self.tags.get(&tag) {
                 // Wake-up subs with `tag`
                 for (sub_id, sub_tx) in &tag_data.subs {
                     if let Some(waker) = self.wakers.remove(sub_id) {
-                        sub_tx.send(notes.clone()).unwrap();
-                        waker.wake();
+                        if let Ok(()) = sub_tx.send(notes.clone()) {
+                            waker.wake();
+                        } else {
+                            remove_subs.push((*sub_id, tag));
+                        }
                     }
                 }
             }
+        }
+        // Remove non-responding subs
+        for (sub_id, tag) in remove_subs {
+            self.remove_sub(sub_id, tag);
         }
     }
 
@@ -142,6 +150,20 @@ impl NoteStreamerManager {
     pub fn add_sub(&mut self, sub: Subface) {
         let entry = self.tags.entry(sub.tag).or_insert_with(TagData::new);
         entry.subs.insert(sub.id, sub.tx);
+    }
+
+    pub fn remove_sub(&mut self, sub_id: u64, tag: NoteTag) {
+        let mut remove_tag = false;
+        if let Some(tag_data) = self.tags.get_mut(&tag) {
+            tag_data.subs.remove(&sub_id);
+            if tag_data.subs.is_empty() {
+                // No more subscribers for this tag
+                remove_tag = true;
+            }
+        }
+        if remove_tag {
+            self.tags.remove(&tag);
+        }
     }
 }
 
