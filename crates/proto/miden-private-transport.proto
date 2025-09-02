@@ -50,6 +50,17 @@ message FetchNotesResponse {
     repeated TransportNoteTimestamped notes = 1;
 }
 
+// API request for streaming notes
+message StreamNotesRequest {
+    fixed32 tag = 1;
+    google.protobuf.Timestamp timestamp = 2;
+}
+
+// API response for streaming notes updates
+message StreamNotesUpdate {
+    repeated TransportNoteTimestamped notes = 1;
+}
+
 // Server health check response
 message HealthResponse {
     string status = 1;
@@ -78,6 +89,9 @@ service MidenPrivateTransport {
     
     // Fetch notes for a specific tag
     rpc FetchNotes(FetchNotesRequest) returns (FetchNotesResponse);
+
+    // Stream notes for a specific tag
+    rpc StreamNotes(StreamNotesRequest) returns (stream StreamNotesUpdate);
     
     // Health check
     rpc Health(google.protobuf.Empty) returns (HealthResponse);
