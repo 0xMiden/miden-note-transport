@@ -5,7 +5,9 @@ pub use miden_objects::{
     Felt,
     account::AccountId,
     block::BlockNumber,
-    note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
+    note::{
+        Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteMetadata, NoteTag, NoteType,
+    },
 };
 use miden_objects::{
     Word,
@@ -66,6 +68,22 @@ where
     NoteHeader::read_from_bytes(&bytes).map_err(|e| {
         D::Error::custom(format!("Failed to deserialize NoteHeader from bytes: {e:?}"))
     })
+}
+
+pub fn note_with_tag(note: &Note, new_tag: NoteTag) -> crate::Result<Note> {
+    let header = *note.header();
+    let details: NoteDetails = note.into();
+
+    let metadata = NoteMetadata::new(
+        header.metadata().sender(),
+        header.metadata().note_type(),
+        new_tag,
+        header.metadata().execution_hint(),
+        header.metadata().aux(),
+    )
+    .map_err(|e| crate::Error::InvalidTag(format!("Invalid new tag {new_tag}: {e}")))?;
+
+    Ok(Note::new(details.assets().clone(), metadata, details.recipient().clone()))
 }
 
 pub fn random_note_id() -> NoteId {
