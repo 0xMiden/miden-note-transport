@@ -16,18 +16,26 @@ use tonic::Status;
 use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
 use crate::{database::Database, metrics::MetricsGrpc};
 
+/// Miden Private Transport gRPC server
 pub struct GrpcServer {
     database: Arc<Database>,
     config: GrpcServerConfig,
-    streamer_tx: mpsc::Sender<StreamerMessage>,
+    streamer: StreamerCtx,
     metrics: MetricsGrpc,
 }
 
+/// [`GrpcServer`] configuration
 #[derive(Clone, Debug)]
 pub struct GrpcServerConfig {
     pub host: String,
     pub port: u16,
     pub max_note_size: usize,
+}
+
+/// Streaming task interface context
+pub(super) struct StreamerCtx {
+    tx: mpsc::Sender<StreamerMessage>,
+    _handle: tokio::task::JoinHandle<()>,
 }
 
 impl Default for GrpcServerConfig {
@@ -42,9 +50,8 @@ impl Default for GrpcServerConfig {
 
 impl GrpcServer {
     pub fn new(database: Arc<Database>, config: GrpcServerConfig, metrics: MetricsGrpc) -> Self {
-        let (streamer_tx, streamer_rx) = mpsc::channel(128);
-        tokio::spawn(NoteStreamer::new(database.clone(), streamer_rx).stream());
-        Self { database, config, streamer_tx, metrics }
+        let streamer = StreamerCtx::spawn(database.clone());
+        Self { database, config, streamer, metrics }
     }
 
     pub fn into_service(self) -> MidenPrivateTransportServer<Self> {
@@ -61,6 +68,17 @@ impl GrpcServer {
             .serve(addr)
             .await
             .map_err(|e| crate::Error::Internal(format!("Server error: {e}")))
+    }
+}
+
+impl StreamerCtx {
+    /// Spawn a [`NoteStreamer`] task
+    ///
+    /// Returns related context composed of the handle and `mpsc::Sender` `tx` for control messages.
+    pub(super) fn spawn(database: Arc<Database>) -> Self {
+        let (tx, rx) = mpsc::channel(128);
+        let handle = tokio::spawn(NoteStreamer::new(database, rx).stream());
+        Self { tx, _handle: handle }
     }
 }
 
@@ -162,9 +180,9 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         let tag = request_data.tag;
         let id = rand::rng().random();
         let (sub_tx, sub_rx) = mpsc::channel(32);
-        let sub = Sub::new(id, sub_rx, self.streamer_tx.clone());
+        let sub = Sub::new(id, sub_rx, self.streamer.tx.clone());
         let subf = Subface::new(id, tag.into(), sub_tx);
-        self.streamer_tx.try_send(StreamerMessage::Sub(subf))
+        self.streamer.tx.try_send(StreamerMessage::Sub(subf))
                     .map_err(|e| tonic::Status::internal(format!("Failed sending internal streamer message: {e}")))?;
 
         Ok(tonic::Response::new(sub))
