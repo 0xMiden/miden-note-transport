@@ -5,8 +5,8 @@ use std::{net::SocketAddr, sync::Arc};
 use chrono::{DateTime, Utc};
 use miden_objects::utils::Deserializable;
 use miden_private_transport_proto::miden_private_transport::{
-    FetchNotesRequest, FetchNotesResponse, HealthResponse, SendNoteRequest, SendNoteResponse,
-    StatsResponse, StreamNotesRequest, TransportNoteTimestamped,
+    FetchNotesRequest, FetchNotesResponse, SendNoteRequest, SendNoteResponse, StatsResponse,
+    StreamNotesRequest, TransportNoteTimestamped,
     miden_private_transport_server::MidenPrivateTransportServer,
 };
 use rand::Rng;
@@ -59,11 +59,15 @@ impl GrpcServer {
     }
 
     pub async fn serve(self) -> crate::Result<()> {
+        let (health_reporter, health_svc) = tonic_health::server::health_reporter();
+        health_reporter.set_serving::<MidenPrivateTransportServer<Self>>().await;
+
         let addr = format!("{}:{}", self.config.host, self.config.port)
             .parse::<SocketAddr>()
             .map_err(|e| crate::Error::Internal(format!("Invalid address: {e}")))?;
 
         tonic::transport::Server::builder()
+            .add_service(health_svc)
             .add_service(self.into_service())
             .serve(addr)
             .await
@@ -188,30 +192,7 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         Ok(tonic::Response::new(sub))
     }
 
-    #[tracing::instrument(skip(self), fields(operation = "health"))]
-    async fn health(
-        &self,
-        _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<HealthResponse>, tonic::Status> {
-        let now = Utc::now();
-        let timestamp = prost_types::Timestamp {
-            seconds: now.timestamp(),
-            nanos: now.timestamp_subsec_nanos()
-                    .try_into()
-                    .map_err(|_| tonic::Status::internal("Timestamp nanoseconds too large".to_string()))?,
-        };
-
-        let response = HealthResponse {
-            status: "healthy".to_string(),
-            timestamp: Some(timestamp),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-        };
-
-        tracing::info!(operation = "health", event = "completed", status = "success");
-        Ok(tonic::Response::new(response))
-    }
-
-    #[tracing::instrument(skip(self), fields(operation = "stats"))]
+    #[tracing::instrument(skip(self), fields(operation = "grpc.stats.request"))]
     async fn stats(
         &self,
         _request: tonic::Request<()>,

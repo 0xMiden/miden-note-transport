@@ -17,6 +17,7 @@ use tonic::{
     Request, Streaming,
     transport::{Channel, ClientTlsConfig},
 };
+use tonic_health::pb::{HealthCheckRequest, health_client::HealthClient};
 use tower::timeout::Timeout;
 
 use crate::{
@@ -27,6 +28,7 @@ use crate::{
 #[derive(Clone)]
 pub struct GrpcClient {
     client: MidenPrivateTransportClient<Timeout<Channel>>,
+    health_client: HealthClient<Timeout<Channel>>,
     // Last fetched timestamp
     lts: HashMap<NoteTag, DateTime<Utc>>,
 }
@@ -41,10 +43,11 @@ impl GrpcClient {
             .await?;
         let timeout = Duration::from_millis(timeout_ms);
         let timeout_channel = Timeout::new(channel, timeout);
+        let health_client = HealthClient::new(timeout_channel.clone());
         let client = MidenPrivateTransportClient::new(timeout_channel);
         let lts = HashMap::new();
 
-        Ok(Self { client, lts })
+        Ok(Self { client, health_client, lts })
     }
 
     pub async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
@@ -147,7 +150,26 @@ impl GrpcClient {
             .map_err(|e| Error::Internal(format!("Stream notes failed: {e:?}")))?;
         Ok(NoteStreamAdapter::new(response.into_inner()))
     }
+
+    /// gRPC-standardized server health-check
+    pub async fn health_check(&mut self) -> Result<()> {
+        let request = tonic::Request::new(HealthCheckRequest {
+            service: String::new(), // empty string -> whole server
+        });
+
+        let response = self.health_client.check(request).await?.into_inner();
+
+        let serving = matches!(
+            response.status(),
+            tonic_health::pb::health_check_response::ServingStatus::Serving
+        );
+
+        serving
+            .then_some(())
+            .ok_or_else(|| tonic::Status::unavailable("Service is not serving").into())
+    }
 }
+
 #[async_trait::async_trait]
 impl super::TransportClient for GrpcClient {
     async fn send_note(

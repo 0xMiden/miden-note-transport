@@ -25,8 +25,9 @@ miden-private-transport-proto = { workspace = true }
 miden-objects = { workspace = true }
 
 # gRPC server and client
-tokio = { workspace = true }
-tonic = { workspace = true }
+tokio        = { workspace = true }
+tonic        = { workspace = true }
+tonic-health = { workspace = true }
 
 # Serialization
 serde      = { features = ["derive"], version = "1.0" }
