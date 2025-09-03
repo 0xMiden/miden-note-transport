@@ -180,9 +180,9 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         let tag = request_data.tag;
         let id = rand::rng().random();
         let (sub_tx, sub_rx) = mpsc::channel(32);
-        let sub = Sub::new(id, sub_rx, self.streamer.tx.clone());
+        let sub = Sub::new(id, tag.into(), sub_rx, self.streamer.tx.clone());
         let subf = Subface::new(id, tag.into(), sub_tx);
-        self.streamer.tx.try_send(StreamerMessage::Sub(subf))
+        self.streamer.tx.try_send(StreamerMessage::AddSub(subf))
                     .map_err(|e| tonic::Status::internal(format!("Failed sending internal streamer message: {e}")))?;
 
         Ok(tonic::Response::new(sub))

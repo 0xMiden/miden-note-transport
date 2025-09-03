@@ -37,7 +37,9 @@ struct NoteStreamerManager {
 /// Internal control message exchanged with the [`NoteStreamer`]
 pub(crate) enum StreamerMessage {
     /// New sub
-    Sub(Subface),
+    AddSub(Subface),
+    /// Remove sub
+    RemoveSub((u64, NoteTag)),
     /// Update waker for sub
     Waker((u64, Waker)),
     /// Shutdown the streamer
@@ -53,6 +55,7 @@ pub struct TagData {
 /// Subscription
 pub struct Sub {
     id: u64,
+    tag: NoteTag,
     rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
     streamer_tx: mpsc::Sender<StreamerMessage>,
 }
@@ -206,7 +209,8 @@ impl NoteStreamer {
             // Handle streamer control messages
             Some(msg) = rx.recv() => {
                 match msg {
-                    StreamerMessage::Sub(sub) => manager.add_sub(sub),
+                    StreamerMessage::AddSub(sub) => manager.add_sub(sub),
+                    StreamerMessage::RemoveSub((id, tag)) => manager.remove_sub(id, tag),
                     StreamerMessage::Waker((id, waker)) => manager.update_waker(id, waker),
                     StreamerMessage::Shutdown => return Ok(false),
                 }
@@ -219,10 +223,11 @@ impl NoteStreamer {
 impl Sub {
     pub(crate) fn new(
         id: u64,
+        tag: NoteTag,
         rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
         streamer_tx: mpsc::Sender<StreamerMessage>,
     ) -> Self {
-        Self { id, rx, streamer_tx }
+        Self { id, tag, rx, streamer_tx }
     }
 }
 
@@ -265,5 +270,13 @@ impl tonic::codegen::tokio_stream::Stream for Sub {
         }
 
         Poll::Pending
+    }
+}
+
+impl Drop for Sub {
+    fn drop(&mut self) {
+        if let Err(e) = self.streamer_tx.try_send(StreamerMessage::RemoveSub((self.id, self.tag))) {
+            tracing::error!("Streamer remove sub control messsage sending error: {e}");
+        }
     }
 }
