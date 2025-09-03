@@ -40,6 +40,8 @@ pub(crate) enum StreamerMessage {
     Sub(Subface),
     /// Update waker for sub
     Waker((u64, Waker)),
+    /// Shutdown the streamer
+    Shutdown,
 }
 
 /// Tag data tracking
@@ -179,9 +181,12 @@ impl NoteStreamer {
     pub(crate) async fn stream(self) {
         let mut manager = self.manager;
         let mut rx = self.rx;
-        loop {
-            if let Err(e) = Self::step(&mut manager, &mut rx).await {
-                tracing::error!("Streamer error: {e}");
+        let mut enabled = true;
+        while enabled {
+            match Self::step(&mut manager, &mut rx).await {
+                Ok(true) => (),
+                Ok(false) => enabled = false,
+                Err(e) => tracing::error!("Streamer error: {e}"),
             }
         }
     }
@@ -190,7 +195,7 @@ impl NoteStreamer {
     async fn step(
         manager: &mut NoteStreamerManager,
         rx: &mut mpsc::Receiver<StreamerMessage>,
-    ) -> crate::Result<()> {
+    ) -> crate::Result<bool> {
         tokio::select! {
             // Periodically query DB for new notes
             res = manager.query_updates() => {
@@ -203,10 +208,11 @@ impl NoteStreamer {
                 match msg {
                     StreamerMessage::Sub(sub) => manager.add_sub(sub),
                     StreamerMessage::Waker((id, waker)) => manager.update_waker(id, waker),
+                    StreamerMessage::Shutdown => return Ok(false),
                 }
             }
         }
-        Ok(())
+        Ok(true)
     }
 }
 

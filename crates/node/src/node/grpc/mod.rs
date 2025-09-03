@@ -35,7 +35,7 @@ pub struct GrpcServerConfig {
 /// Streaming task interface context
 pub(super) struct StreamerCtx {
     tx: mpsc::Sender<StreamerMessage>,
-    _handle: tokio::task::JoinHandle<()>,
+    handle: tokio::task::JoinHandle<()>,
 }
 
 impl Default for GrpcServerConfig {
@@ -78,7 +78,7 @@ impl StreamerCtx {
     pub(super) fn spawn(database: Arc<Database>) -> Self {
         let (tx, rx) = mpsc::channel(128);
         let handle = tokio::spawn(NoteStreamer::new(database, rx).stream());
-        Self { tx, _handle: handle }
+        Self { tx, handle }
     }
 }
 
@@ -228,5 +228,14 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         };
 
         Ok(tonic::Response::new(response))
+    }
+}
+
+impl Drop for StreamerCtx {
+    fn drop(&mut self) {
+        if let Err(e) = self.tx.try_send(StreamerMessage::Shutdown) {
+            tracing::error!("Streamer shutdown message sending failure: {e}");
+            self.handle.abort();
+        }
     }
 }
