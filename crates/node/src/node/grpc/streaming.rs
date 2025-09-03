@@ -18,7 +18,7 @@ use crate::{
 /// Streaming handler
 pub struct NoteStreamer {
     manager: NoteStreamerManager,
-    rx: mpsc::UnboundedReceiver<StreamerMessage>,
+    rx: mpsc::Receiver<StreamerMessage>,
 }
 
 /// Streaming manager
@@ -45,21 +45,21 @@ pub(crate) enum StreamerMessage {
 /// Tag data tracking
 pub struct TagData {
     lts: DateTime<Utc>,
-    subs: BTreeMap<u64, mpsc::UnboundedSender<Vec<TransportNoteTimestamped>>>,
+    subs: BTreeMap<u64, mpsc::Sender<Vec<TransportNoteTimestamped>>>,
 }
 
 /// Subscription
 pub struct Sub {
     id: u64,
-    rx: mpsc::UnboundedReceiver<Vec<TransportNoteTimestamped>>,
-    streamer_tx: mpsc::UnboundedSender<StreamerMessage>,
+    rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
+    streamer_tx: mpsc::Sender<StreamerMessage>,
 }
 
 /// Subscription interface
 pub struct Subface {
     id: u64,
     tag: NoteTag,
-    tx: mpsc::UnboundedSender<Vec<TransportNoteTimestamped>>,
+    tx: mpsc::Sender<Vec<TransportNoteTimestamped>>,
 }
 
 impl NoteStreamerManager {
@@ -109,7 +109,7 @@ impl NoteStreamerManager {
                 // Wake-up subs with `tag`
                 for (sub_id, sub_tx) in &tag_data.subs {
                     if let Some(waker) = self.wakers.remove(sub_id) {
-                        if let Ok(()) = sub_tx.send(notes.clone()) {
+                        if let Ok(()) = sub_tx.try_send(notes.clone()) {
                             waker.wake();
                         } else {
                             remove_subs.push((*sub_id, tag));
@@ -168,10 +168,7 @@ impl NoteStreamerManager {
 }
 
 impl NoteStreamer {
-    pub(crate) fn new(
-        database: Arc<Database>,
-        rx: mpsc::UnboundedReceiver<StreamerMessage>,
-    ) -> Self {
+    pub(crate) fn new(database: Arc<Database>, rx: mpsc::Receiver<StreamerMessage>) -> Self {
         Self {
             manager: NoteStreamerManager::new(database),
             rx,
@@ -192,7 +189,7 @@ impl NoteStreamer {
     /// Streamer loop step
     async fn step(
         manager: &mut NoteStreamerManager,
-        rx: &mut mpsc::UnboundedReceiver<StreamerMessage>,
+        rx: &mut mpsc::Receiver<StreamerMessage>,
     ) -> crate::Result<()> {
         tokio::select! {
             // Periodically query DB for new notes
@@ -216,19 +213,15 @@ impl NoteStreamer {
 impl Sub {
     pub(crate) fn new(
         id: u64,
-        rx: mpsc::UnboundedReceiver<Vec<TransportNoteTimestamped>>,
-        streamer_tx: mpsc::UnboundedSender<StreamerMessage>,
+        rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
+        streamer_tx: mpsc::Sender<StreamerMessage>,
     ) -> Self {
         Self { id, rx, streamer_tx }
     }
 }
 
 impl Subface {
-    pub fn new(
-        id: u64,
-        tag: NoteTag,
-        tx: mpsc::UnboundedSender<Vec<TransportNoteTimestamped>>,
-    ) -> Self {
+    pub fn new(id: u64, tag: NoteTag, tx: mpsc::Sender<Vec<TransportNoteTimestamped>>) -> Self {
         Self { id, tag, tx }
     }
 }
@@ -258,7 +251,8 @@ impl tonic::codegen::tokio_stream::Stream for Sub {
         }
 
         // Update streamer' stored waker
-        if let Err(e) = self.streamer_tx.send(StreamerMessage::Waker((self.id, cx.waker().clone())))
+        if let Err(e) =
+            self.streamer_tx.try_send(StreamerMessage::Waker((self.id, cx.waker().clone())))
         {
             tracing::error!("Streaming waker tx failure: {e}");
             return Poll::Ready(None);

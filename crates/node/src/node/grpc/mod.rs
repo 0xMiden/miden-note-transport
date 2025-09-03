@@ -19,7 +19,7 @@ use crate::{database::Database, metrics::MetricsGrpc};
 pub struct GrpcServer {
     database: Arc<Database>,
     config: GrpcServerConfig,
-    streamer_tx: mpsc::UnboundedSender<StreamerMessage>,
+    streamer_tx: mpsc::Sender<StreamerMessage>,
     metrics: MetricsGrpc,
 }
 
@@ -42,7 +42,7 @@ impl Default for GrpcServerConfig {
 
 impl GrpcServer {
     pub fn new(database: Arc<Database>, config: GrpcServerConfig, metrics: MetricsGrpc) -> Self {
-        let (streamer_tx, streamer_rx) = mpsc::unbounded_channel();
+        let (streamer_tx, streamer_rx) = mpsc::channel(128);
         tokio::spawn(NoteStreamer::new(database.clone(), streamer_rx).stream());
         Self { database, config, streamer_tx, metrics }
     }
@@ -161,10 +161,10 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
         let request_data = request.into_inner();
         let tag = request_data.tag;
         let id = rand::rng().random();
-        let (sub_tx, sub_rx) = mpsc::unbounded_channel();
+        let (sub_tx, sub_rx) = mpsc::channel(32);
         let sub = Sub::new(id, sub_rx, self.streamer_tx.clone());
         let subf = Subface::new(id, tag.into(), sub_tx);
-        self.streamer_tx.send(StreamerMessage::Sub(subf))
+        self.streamer_tx.try_send(StreamerMessage::Sub(subf))
                     .map_err(|e| tonic::Status::internal(format!("Failed sending internal streamer message: {e}")))?;
 
         Ok(tonic::Response::new(sub))
