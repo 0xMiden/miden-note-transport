@@ -25,16 +25,33 @@ miden-private-transport-proto  = { path = "crates/proto", version = "0.1" }
 miden-objects = { features = ["testing"], version = "0.11.1" }
 
 # External dependencies
-anyhow             = { version = "1.0" }
-base64             = { version = "0.22" }
-clap               = { features = ["derive"], version = "4.5" }
-futures            = { version = "0.3" }
-hex                = { version = "0.4" }
-thiserror          = { default-features = false, version = "2.0" }
-tokio              = { version = "1.47" }
-tonic              = { version = "0.13" }
-tonic-health       = { version = "0.13" }
-tracing            = { version = "0.1" }
+anyhow = { version = "1.0" }
+async-trait = { version = "0.1" }
+base64 = { version = "0.22" }
+chrono = { features = ["serde"], version = "0.4" }
+clap = { features = ["derive"], version = "4.5" }
+futures = { version = "0.3" }
+hex = { version = "0.4" }
+opentelemetry = { version = "0.30" }
+opentelemetry-otlp = { default-features = false, features = [
+  "grpc-tonic",
+  "metrics",
+  "tls-roots",
+  "trace",
+], version = "0.30" }
+opentelemetry_sdk = { features = ["metrics", "rt-tokio", "testing"], version = "0.30" }
+prost-types = { version = "0.13" }
+rand = { version = "0.9" }
+serde = { features = ["derive"], version = "1.0" }
+serde_json = { version = "1.0" }
+serial_test = { version = "3.2" }
+sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
+thiserror = { default-features = false, version = "2.0" }
+tokio = { version = "1.47" }
+tonic = { version = "0.13" }
+tonic-health = { version = "0.13" }
+tracing = { version = "0.1" }
+tracing-opentelemetry = { version = "0.31" }
 tracing-subscriber = { features = ["env-filter", "fmt", "json"], version = "0.3" }
 
 # Lints are set to warn for development, which are promoted to errors in CI.

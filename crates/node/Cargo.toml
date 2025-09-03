@@ -30,40 +30,35 @@ tonic        = { workspace = true }
 tonic-health = { workspace = true }
 
 # Serialization
-serde      = { features = ["derive"], version = "1.0" }
-serde_json = "1.0"
+serde      = { workspace = true }
+serde_json = { workspace = true }
 
 # Protobuf
-prost-types = "0.13"
+prost-types = { workspace = true }
 
 # Database
-sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
+sqlx = { workspace = true }
 
 # Logging
-opentelemetry = { version = "0.30" }
-opentelemetry-otlp = { default-features = false, features = [
-  "grpc-tonic",
-  "metrics",
-  "tls-roots",
-  "trace",
-], version = "0.30" }
-opentelemetry_sdk = { features = ["metrics", "rt-tokio", "testing"], version = "0.30" }
-tracing = { workspace = true }
-tracing-opentelemetry = { version = "0.31" }
-tracing-subscriber = { workspace = true }
+opentelemetry         = { workspace = true }
+opentelemetry-otlp    = { workspace = true }
+opentelemetry_sdk     = { workspace = true }
+tracing               = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber    = { workspace = true }
 
 # Error handling
-anyhow    = "1.0"
-thiserror = "2.0"
+anyhow    = { workspace = true }
+thiserror = { workspace = true }
 
 # Async traits
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # Time handling
-chrono = { features = ["serde"], version = "0.4" }
+chrono = { workspace = true }
 
 # General
-rand = "0.9"
+rand = { workspace = true }
 
 [dev-dependencies]
-serial_test = "3.2"
+serial_test = { workspace = true }
