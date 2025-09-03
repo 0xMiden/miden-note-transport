@@ -276,7 +276,7 @@ impl tonic::codegen::tokio_stream::Stream for Sub {
 impl Drop for Sub {
     fn drop(&mut self) {
         if let Err(e) = self.streamer_tx.try_send(StreamerMessage::RemoveSub((self.id, self.tag))) {
-            tracing::error!("Streamer remove sub control messsage sending error: {e}");
+            tracing::error!("Streamer remove sub control message sending error: {e}");
         }
     }
 }
