@@ -43,14 +43,14 @@ async fn test_transport_stream() -> Result<(), Box<dyn std::error::Error>> {
         count
     });
 
-    client0.send_note(note0, Some(&adr1)).await.unwrap();
+    client0.send_note(note0, &adr1).await.unwrap();
     sleep(Duration::from_secs(1)).await;
 
-    client0.send_note(note1, Some(&adr1)).await.unwrap();
+    client0.send_note(note1, &adr1).await.unwrap();
     sleep(Duration::from_secs(1)).await;
 
     // Ignored note
-    client0.send_note(note2, Some(&adr2)).await.unwrap();
+    client0.send_note(note2, &adr2).await.unwrap();
 
     assert_eq!(count.await.unwrap(), 2);
 
