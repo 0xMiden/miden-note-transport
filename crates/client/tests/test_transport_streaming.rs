@@ -60,7 +60,7 @@ async fn test_transport_stream() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn test_transport_stream_multiple_receivers() -> Result<(), Box<dyn std::error::Error>> {
-    let port = 9631;
+    let port = 9632;
     let handle = spawn_test_server(port).await;
 
     let (mut client0, adr0) = test_client(port).await;
