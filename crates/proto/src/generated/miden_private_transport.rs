@@ -48,6 +48,20 @@ pub struct FetchNotesResponse {
     #[prost(message, repeated, tag = "1")]
     pub notes: ::prost::alloc::vec::Vec<TransportNoteTimestamped>,
 }
+/// API request for streaming notes
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct StreamNotesRequest {
+    #[prost(fixed32, tag = "1")]
+    pub tag: u32,
+    #[prost(message, optional, tag = "2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+}
+/// API response for streaming notes updates
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamNotesUpdate {
+    #[prost(message, repeated, tag = "1")]
+    pub notes: ::prost::alloc::vec::Vec<TransportNoteTimestamped>,
+}
 /// Server health check response
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HealthResponse {
@@ -234,6 +248,28 @@ pub mod miden_private_transport_client {
             ));
             self.inner.unary(req, path, codec).await
         }
+        /// Stream notes for a specific tag
+        pub async fn stream_notes(
+            &mut self,
+            request: impl tonic::IntoRequest<super::StreamNotesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::StreamNotesUpdate>>,
+            tonic::Status,
+        > {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/miden_private_transport.MidenPrivateTransport/StreamNotes",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "miden_private_transport.MidenPrivateTransport",
+                "StreamNotes",
+            ));
+            self.inner.server_streaming(req, path, codec).await
+        }
         /// Health check
         pub async fn health(
             &mut self,
@@ -294,6 +330,16 @@ pub mod miden_private_transport_server {
             &self,
             request: tonic::Request<super::FetchNotesRequest>,
         ) -> std::result::Result<tonic::Response<super::FetchNotesResponse>, tonic::Status>;
+        /// Server streaming response type for the StreamNotes method.
+        type StreamNotesStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::StreamNotesUpdate, tonic::Status>,
+            > + std::marker::Send
+            + 'static;
+        /// Stream notes for a specific tag
+        async fn stream_notes(
+            &self,
+            request: tonic::Request<super::StreamNotesRequest>,
+        ) -> std::result::Result<tonic::Response<Self::StreamNotesStream>, tonic::Status>;
         /// Health check
         async fn health(
             &self,
@@ -457,6 +503,50 @@ pub mod miden_private_transport_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                },
+                "/miden_private_transport.MidenPrivateTransport/StreamNotes" => {
+                    #[allow(non_camel_case_types)]
+                    struct StreamNotesSvc<T: MidenPrivateTransport>(pub Arc<T>);
+                    impl<T: MidenPrivateTransport>
+                        tonic::server::ServerStreamingService<super::StreamNotesRequest>
+                        for StreamNotesSvc<T>
+                    {
+                        type Response = super::StreamNotesUpdate;
+                        type ResponseStream = T::StreamNotesStream;
+                        type Future =
+                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::StreamNotesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as MidenPrivateTransport>::stream_notes(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = StreamNotesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

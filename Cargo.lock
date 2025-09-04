@@ -1607,6 +1607,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "futures",
  "hex",
  "miden-objects",
  "miden-private-transport-client",
@@ -1621,6 +1622,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "futures",
  "miden-lib",
  "miden-objects",
  "miden-private-transport-node",

@@ -50,6 +50,18 @@ pub struct NoteInfo {
     pub created_at: DateTime<Utc>,
 }
 
+pub fn proto_timestamp_to_datetime(pts: prost_types::Timestamp) -> anyhow::Result<DateTime<Utc>> {
+    let dts = DateTime::from_timestamp(
+        pts.seconds,
+        pts.nanos
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Negative timestamp nanoseconds".to_string()))?,
+    )
+    .ok_or_else(|| anyhow::anyhow!("Invalid timestamp".to_string()))?;
+
+    Ok(dts)
+}
+
 fn serialize_note_header<S>(note_header: &NoteHeader, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -154,7 +166,11 @@ pub fn mock_note_p2id_with_addresses(
     sender: &Address,
     target: &Address,
 ) -> miden_objects::note::Note {
-    let mut rng = RpoRandomCoin::new(Word::default());
+    use rand::RngCore;
+
+    let mut randrng = rand::rng();
+    let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
+    let mut rng = RpoRandomCoin::new(seed.into());
     let sender_id = address_to_account_id(sender).unwrap();
     let target_id = address_to_account_id(target).unwrap();
     create_p2id_note(sender_id, target_id, vec![], NoteType::Private, Felt::default(), &mut rng)

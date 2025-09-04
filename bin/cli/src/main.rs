@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
+use futures::StreamExt;
 use miden_objects::{account::NetworkId, address::Address, note::Note, utils::Deserializable};
 use miden_private_transport_client::{
     Error, Result, TransportLayerClient,
@@ -49,6 +50,13 @@ enum Commands {
 
     /// Fetch notes for a tag
     Fetch {
+        /// Note tag
+        #[arg(long)]
+        tag: u32,
+    },
+
+    /// Stream notes for a tag
+    Stream {
         /// Note tag
         #[arg(long)]
         tag: u32,
@@ -113,6 +121,9 @@ async fn main() -> Result<()> {
         Commands::Fetch { tag } => {
             fetch_notes(&mut client, tag).await?;
         },
+        Commands::Stream { tag } => {
+            stream_notes(&mut client, tag).await?;
+        },
         Commands::Init { address } => {
             init(&mut client, &address)?;
         },
@@ -165,6 +176,33 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> 
 
     for (i, (header, details)) in decrypted_notes.iter().enumerate() {
         println!("Note {}:\n Header: {:?}\n Details: {:?}", i + 1, header, details);
+    }
+
+    Ok(())
+}
+
+async fn stream_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> {
+    // Stream notes
+    let mut stream = client.stream_notes(tag.into()).await?;
+
+    while let Some(notes_result) = stream.next().await {
+        match notes_result {
+            Ok(notes) => {
+                for (i, note_info) in notes.iter().enumerate() {
+                    println!(
+                        "Note {}:\n Header: {:?}\n Details: {} bytes\n Created: {:?}\n",
+                        i + 1,
+                        note_info.header,
+                        note_info.details.len(),
+                        note_info.created_at
+                    );
+                }
+            },
+            Err(e) => {
+                eprintln!("Stream error: {e}");
+                break;
+            },
+        }
     }
 
     Ok(())

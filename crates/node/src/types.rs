@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-// Use miden-objects
+use miden_objects::utils::Serializable;
 pub use miden_objects::{
     Felt,
     account::AccountId,
@@ -24,6 +24,44 @@ pub struct StoredNote {
     pub header: NoteHeader,
     pub details: Vec<u8>,
     pub created_at: DateTime<Utc>,
+}
+
+impl TryFrom<StoredNote> for miden_private_transport_proto::TransportNoteTimestamped {
+    type Error = anyhow::Error;
+
+    fn try_from(snote: StoredNote) -> Result<Self, Self::Error> {
+        let nanos = snote.created_at.timestamp_subsec_nanos();
+        let nanos_i32 = nanos
+            .try_into()
+            .map_err(|e| anyhow::anyhow!("Timestamp nanoseconds too large: {e}"))?;
+
+        let pnote = miden_private_transport_proto::TransportNote {
+            header: snote.header.to_bytes(),
+            details: snote.details,
+        };
+
+        let ptimestamp = prost_types::Timestamp {
+            seconds: snote.created_at.timestamp(),
+            nanos: nanos_i32,
+        };
+
+        Ok(Self {
+            note: Some(pnote),
+            timestamp: Some(ptimestamp),
+        })
+    }
+}
+
+pub fn proto_timestamp_to_datetime(pts: prost_types::Timestamp) -> anyhow::Result<DateTime<Utc>> {
+    let dts = DateTime::from_timestamp(
+        pts.seconds,
+        pts.nanos
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Negative timestamp nanoseconds".to_string()))?,
+    )
+    .ok_or_else(|| anyhow::anyhow!("Invalid timestamp".to_string()))?;
+
+    Ok(dts)
 }
 
 fn serialize_note_header<S>(note_header: &NoteHeader, serializer: S) -> Result<S::Ok, S::Error>

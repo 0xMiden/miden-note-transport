@@ -28,6 +28,7 @@ miden-objects = { features = ["testing"], version = "0.11.1" }
 anyhow             = { version = "1.0" }
 base64             = { version = "0.22" }
 clap               = { features = ["derive"], version = "4.5" }
+futures            = { version = "0.3" }
 hex                = { version = "0.4" }
 thiserror          = { default-features = false, version = "2.0" }
 tokio              = { version = "1.47" }

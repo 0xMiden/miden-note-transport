@@ -5,6 +5,7 @@ pub mod logging;
 pub mod types;
 
 // Re-exports
+use futures::Stream;
 use miden_objects::{
     address::Address,
     utils::{Deserializable, Serializable},
@@ -31,7 +32,13 @@ pub trait TransportClient: Send + Sync {
 
     /// Fetch all notes for a given tag
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>>;
+
+    /// Stream notes for a given tag
+    async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>>;
 }
+
+/// Stream trait for note streaming
+pub trait NoteStream: Stream<Item = Result<Vec<NoteInfo>>> + Send + Unpin {}
 
 /// Client for interacting with the transport layer
 pub struct TransportLayerClient {
@@ -90,6 +97,11 @@ impl TransportLayerClient {
         }
 
         Ok(decrypted_notes)
+    }
+
+    /// Continuously fetch notes
+    pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
+        self.transport_client.stream_notes(tag).await
     }
 
     /// Adds an owned address
