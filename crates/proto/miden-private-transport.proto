@@ -61,13 +61,6 @@ message StreamNotesUpdate {
     repeated TransportNoteTimestamped notes = 1;
 }
 
-// Server health check response
-message HealthResponse {
-    string status = 1;
-    google.protobuf.Timestamp timestamp = 2;
-    string version = 3;
-}
-
 // Server statistics
 message StatsResponse {
     uint64 total_notes = 1;
@@ -92,9 +85,6 @@ service MidenPrivateTransport {
 
     // Stream notes for a specific tag
     rpc StreamNotes(StreamNotesRequest) returns (stream StreamNotesUpdate);
-    
-    // Health check
-    rpc Health(google.protobuf.Empty) returns (HealthResponse);
     
     // Get server statistics
     rpc Stats(google.protobuf.Empty) returns (StatsResponse);

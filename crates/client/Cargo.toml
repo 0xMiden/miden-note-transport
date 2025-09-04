@@ -27,9 +27,10 @@ miden-objects = { workspace = true }
 miden-testing = "0.11.1"
 
 # gRPC server and client
-tokio = { workspace = true }
-tonic = { workspace = true }
-tower = { features = ["timeout"], version = "0.5" }
+tokio        = { workspace = true }
+tonic        = { workspace = true }
+tonic-health = { workspace = true }
+tower        = { features = ["timeout"], version = "0.5" }
 
 # Serialization
 serde      = { features = ["derive"], version = "1.0" }

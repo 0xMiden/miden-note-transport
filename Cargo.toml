@@ -33,6 +33,7 @@ hex                = { version = "0.4" }
 thiserror          = { default-features = false, version = "2.0" }
 tokio              = { version = "1.47" }
 tonic              = { version = "0.13" }
+tonic-health       = { version = "0.13" }
 tracing            = { version = "0.1" }
 tracing-subscriber = { features = ["env-filter", "fmt", "json"], version = "0.3" }
 

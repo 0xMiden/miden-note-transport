@@ -69,6 +69,9 @@ enum Commands {
         address: String,
     },
 
+    /// Check gRPC server health
+    HealthCheck {},
+
     /// Clean up old data
     Cleanup {
         /// Retention period in days
@@ -111,8 +114,9 @@ async fn main() -> Result<()> {
     };
 
     // Create client
-    let grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
-    let mut client = TransportLayerClient::init(Box::new(grpc), vec![], Some(db_config)).await?;
+    let mut grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
+    let mut client =
+        TransportLayerClient::init(Box::new(grpc.clone()), vec![], Some(db_config)).await?;
 
     match args.command {
         Commands::Send { note, recipient } => {
@@ -123,6 +127,9 @@ async fn main() -> Result<()> {
         },
         Commands::Stream { tag } => {
             stream_notes(&mut client, tag).await?;
+        },
+        Commands::HealthCheck {} => {
+            health_check(&mut grpc).await;
         },
         Commands::Init { address } => {
             init(&mut client, &address)?;
@@ -206,6 +213,13 @@ async fn stream_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()>
     }
 
     Ok(())
+}
+
+async fn health_check(client: &mut GrpcClient) {
+    match client.health_check().await {
+        Ok(()) => println!("✅ gRPC Server health check OK"),
+        Err(e) => println!("❌ gRPC Server health check FAILED: {e}"),
+    }
 }
 
 fn init(client: &mut TransportLayerClient, address_bech32: &str) -> Result<()> {

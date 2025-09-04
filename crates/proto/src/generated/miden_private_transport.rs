@@ -62,16 +62,6 @@ pub struct StreamNotesUpdate {
     #[prost(message, repeated, tag = "1")]
     pub notes: ::prost::alloc::vec::Vec<TransportNoteTimestamped>,
 }
-/// Server health check response
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct HealthResponse {
-    #[prost(string, tag = "1")]
-    pub status: ::prost::alloc::string::String,
-    #[prost(message, optional, tag = "2")]
-    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(string, tag = "3")]
-    pub version: ::prost::alloc::string::String,
-}
 /// Server statistics
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatsResponse {
@@ -270,23 +260,6 @@ pub mod miden_private_transport_client {
             ));
             self.inner.server_streaming(req, path, codec).await
         }
-        /// Health check
-        pub async fn health(
-            &mut self,
-            request: impl tonic::IntoRequest<()>,
-        ) -> std::result::Result<tonic::Response<super::HealthResponse>, tonic::Status> {
-            self.inner.ready().await.map_err(|e| {
-                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
-            })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/miden_private_transport.MidenPrivateTransport/Health",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("miden_private_transport.MidenPrivateTransport", "Health"));
-            self.inner.unary(req, path, codec).await
-        }
         /// Get server statistics
         pub async fn stats(
             &mut self,
@@ -340,11 +313,6 @@ pub mod miden_private_transport_server {
             &self,
             request: tonic::Request<super::StreamNotesRequest>,
         ) -> std::result::Result<tonic::Response<Self::StreamNotesStream>, tonic::Status>;
-        /// Health check
-        async fn health(
-            &self,
-            request: tonic::Request<()>,
-        ) -> std::result::Result<tonic::Response<super::HealthResponse>, tonic::Status>;
         /// Get server statistics
         async fn stats(
             &self,
@@ -547,42 +515,6 @@ pub mod miden_private_transport_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.server_streaming(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                },
-                "/miden_private_transport.MidenPrivateTransport/Health" => {
-                    #[allow(non_camel_case_types)]
-                    struct HealthSvc<T: MidenPrivateTransport>(pub Arc<T>);
-                    impl<T: MidenPrivateTransport> tonic::server::UnaryService<()> for HealthSvc<T> {
-                        type Response = super::HealthResponse;
-                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
-                        fn call(&mut self, request: tonic::Request<()>) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as MidenPrivateTransport>::health(&inner, request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let method = HealthSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
