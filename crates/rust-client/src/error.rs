@@ -52,3 +52,11 @@ impl From<tonic::Status> for Error {
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
+
+#[cfg(feature = "idxdb")]
+impl From<Error> for wasm_bindgen::JsValue {
+    fn from(e: Error) -> Self {
+        use alloc::string::ToString;
+        Self::from_str(&e.to_string())
+    }
+}

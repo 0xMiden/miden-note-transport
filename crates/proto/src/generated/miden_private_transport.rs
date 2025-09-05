@@ -31,8 +31,6 @@ pub struct SendNoteResponse {
     /// NoteId as hex string
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
-    #[prost(enumeration = "NoteStatus", tag = "2")]
-    pub status: i32,
 }
 /// API request for fetching notes
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
@@ -81,33 +79,6 @@ pub struct TagStats {
     pub note_count: u64,
     #[prost(message, optional, tag = "3")]
     pub last_activity: ::core::option::Option<::prost_types::Timestamp>,
-}
-/// Note status enum
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum NoteStatus {
-    Sent = 0,
-    Duplicate = 1,
-}
-impl NoteStatus {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            Self::Sent => "SENT",
-            Self::Duplicate => "DUPLICATE",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "SENT" => Some(Self::Sent),
-            "DUPLICATE" => Some(Self::Duplicate),
-            _ => None,
-        }
-    }
 }
 /// Generated client implementations.
 pub mod miden_private_transport_client {

@@ -1,7 +1,7 @@
 mod common;
 
 use miden_private_transport_client::types::{
-    NoteStatus, mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
+    mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
 };
 
 use self::common::*;
@@ -19,8 +19,9 @@ async fn test_transport_client_note_fetch_tracking()
 
     // Create and send a note
     let note = mock_note_p2id_with_tag_and_addresses(tag, &adr0, &adr1);
-    let (note_id, status) = client0.send_note(note, &adr1).await.unwrap();
-    assert!(matches!(status, NoteStatus::Sent));
+    let note_id = note.id();
+    let rx_note_id = client0.send_note(note, &adr1).await.unwrap();
+    assert_eq!(rx_note_id, note_id);
 
     // Test note fetching recording
 
@@ -45,8 +46,9 @@ async fn test_transport_client_note_storage() -> std::result::Result<(), Box<dyn
 
     // Send a note
     let note = mock_note_p2id_with_addresses(&adr0, &adr1);
-    let (note_id, note_status) = client0.send_note(note, &adr1).await.unwrap();
-    assert!(matches!(note_status, NoteStatus::Sent));
+    let note_id = note.id();
+    let rx_note_id = client0.send_note(note, &adr1).await.unwrap();
+    assert_eq!(rx_note_id, rx_note_id);
 
     // Fetch
     let sent_tag = adr1.to_note_tag();

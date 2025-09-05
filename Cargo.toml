@@ -3,7 +3,7 @@ members = [
   "bin/cli",
   "bin/node",
   "crates/rust-client",
-  #"crates/web-client",
+  "crates/web-client",
   "crates/node",
   "crates/proto",
 ]
@@ -57,6 +57,9 @@ thiserror = { default-features = false, version = "2.0" }
 tokio = { features = ["macros", "net", "rt-multi-thread"], version = "1.47" }
 tonic = { default-features = false, version = "0.13" }
 tonic-health = { version = "0.13" }
+tonic-web = { version = "0.13" }
+tower = { version = "0.5" }
+tower-http = { features = ["cors"], version = "0.6" }
 tracing = { version = "0.1" }
 tracing-opentelemetry = { version = "0.31" }
 tracing-subscriber = { features = ["env-filter", "fmt", "json"], version = "0.3" }

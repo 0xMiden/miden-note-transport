@@ -22,7 +22,7 @@ use miden_objects::{
 
 use self::{
     database::Database,
-    types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
+    types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteTag},
 };
 pub use self::{
     error::{Error, Result},
@@ -34,11 +34,7 @@ pub use self::{
 #[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 pub trait TransportClient: Send + Sync {
     /// Send a note with optionally encrypted details
-    async fn send_note(
-        &mut self,
-        header: NoteHeader,
-        details: Vec<u8>,
-    ) -> Result<(NoteId, NoteStatus)>;
+    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId>;
 
     /// Fetch all notes for a given tag
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>>;
@@ -72,11 +68,7 @@ impl TransportLayerClient {
     ///
     /// If the note tag in the provided note is different than the recipient's [`Address`] note tag,
     /// the provided note' tag is updated.
-    pub async fn send_note(
-        &mut self,
-        note: Note,
-        _address: &Address,
-    ) -> Result<(NoteId, NoteStatus)> {
+    pub async fn send_note(&mut self, note: Note, _address: &Address) -> Result<NoteId> {
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();

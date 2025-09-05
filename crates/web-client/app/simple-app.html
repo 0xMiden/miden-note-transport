@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miden Private Transport</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        
+        .container {
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #ffff00;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #cccccc;
+            font-weight: bold;
+        }
+        
+        input[type="text"], input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            background-color: #333;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus, input[type="url"]:focus {
+            outline: none;
+            border-color: #00ff00;
+        }
+        
+        button {
+            background-color: #00ff00;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #00cc00;
+        }
+        
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background-color: #004400;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+        
+        .status.error {
+            background-color: #440000;
+            color: #ff6666;
+            border: 1px solid #ff6666;
+        }
+        
+        .status.info {
+            background-color: #444400;
+            color: #ffff00;
+            border: 1px solid #ffff00;
+        }
+        
+        .output {
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .connection-status.connected {
+            background-color: #00ff00;
+        }
+        
+        .connection-status.disconnected {
+            background-color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Miden Private Transport</h1>
+    
+    <!-- Connection Section -->
+    <div class="container">
+        <h2>
+            <span class="connection-status disconnected" id="connectionStatus"></span>
+            Server Connection
+        </h2>
+        <div class="form-group">
+            <label for="serverUrl">Server URL:</label>
+            <input type="url" id="serverUrl" placeholder="http://localhost:8080" value="http://localhost:8080">
+        </div>
+        <button id="connectBtn" onclick="connectToServer()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnectFromServer()" disabled>Disconnect</button>
+        <div id="connectionStatus" class="status info" style="display: none;"></div>
+    </div>
+    
+    <!-- Send Note Section -->
+    <div class="container">
+        <h2>📤 Send Note</h2>
+        <div class="form-group">
+            <label for="noteHex">Note (as hex string):</label>
+            <input type="text" id="noteHex" placeholder="Enter note as hex string">
+        </div>
+        <div class="form-group">
+            <label for="targetAddress">Target Address (bech32 format):</label>
+            <input type="text" id="targetAddress" placeholder="Enter target address in bech32 format (e.g., miden1q...)"">
+        </div>
+        <button id="sendNoteBtn" onclick="sendNote()" disabled>Send Note</button>
+        <div id="sendStatus" class="status info" style="display: none;"></div>
+        <div id="sendOutput" class="output" style="display: none;"></div>
+    </div>
+    
+    <!-- Fetch Notes Section -->
+    <div class="container">
+        <h2>📥 Fetch Notes</h2>
+        <div class="form-group">
+            <label for="noteTag">Note Tag (integer):</label>
+            <input type="number" id="noteTag" placeholder="Enter note tag as integer (e.g., 123)" min="0">
+        </div>
+        <button id="fetchNotesBtn" onclick="fetchNotes()" disabled>Fetch Notes</button>
+        <div id="fetchStatus" class="status info" style="display: none;"></div>
+        <div id="fetchOutput" class="output" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        let client = null;
+        let isConnected = false;
+
+        // Import the web-client module
+        let TransportLayerWebClient, mockAddress, mockNoteP2IDWithAddresses, Note, Address, NoteTag, parse_bech32_address, create_note_tag_from_int, parse_hex_note, get_note_info, get_note_tag, get_note_sender_bech32;
+        
+        async function loadModule() {
+            try {
+                const module = await import('./dist/index.js');
+                
+                TransportLayerWebClient = module.TransportLayerWebClient;
+                mockAddress = module.mockAddress;
+                mockNoteP2IDWithAddresses = module.mockNoteP2IDWithAddresses;
+                Note = module.Note;
+                Address = module.Address;
+                NoteTag = module.NoteTag;
+                parse_bech32_address = module.parse_bech32_address;
+                create_note_tag_from_int = module.create_note_tag_from_int;
+                parse_hex_note = module.parse_hex_note;
+                get_note_info = module.get_note_info;
+                get_note_tag = module.get_note_tag;
+                get_note_sender_bech32 = module.get_note_sender_bech32;
+                
+                // Expose modules to global window object for tests
+                window.TransportLayerWebClient = TransportLayerWebClient;
+                window.mockAddress = mockAddress;
+                window.mockNoteP2IDWithAddresses = mockNoteP2IDWithAddresses;
+                window.Note = Note;
+                window.Address = Address;
+                window.NoteTag = NoteTag;
+                window.create_note_tag_from_int = create_note_tag_from_int;
+            } catch (error) {
+                showStatus('connectionStatus', 'Failed to load web-client module: ' + error.message, 'error');
+            }
+        }
+
+        // Load the module when the page loads
+        loadModule();
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        function showOutput(elementId, content) {
+            const element = document.getElementById(elementId);
+            element.textContent = content;
+            element.style.display = 'block';
+        }
+
+        function updateConnectionUI() {
+            const statusDot = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const sendNoteBtn = document.getElementById('sendNoteBtn');
+            const fetchNotesBtn = document.getElementById('fetchNotesBtn');
+
+            if (isConnected) {
+                statusDot.className = 'connection-status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendNoteBtn.disabled = false;
+                fetchNotesBtn.disabled = false;
+            } else {
+                statusDot.className = 'connection-status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendNoteBtn.disabled = true;
+                fetchNotesBtn.disabled = true;
+            }
+        }
+
+        window.connectToServer = async function() {
+            if (!TransportLayerWebClient) {
+                showStatus('connectionStatus', 'Web-client module not loaded yet. Please wait...', 'error');
+                return;
+            }
+
+            const serverUrl = document.getElementById('serverUrl').value;
+            if (!serverUrl) {
+                showStatus('connectionStatus', 'Please enter a server URL', 'error');
+                return;
+            }
+
+            try {
+                showStatus('connectionStatus', 'Connecting to server...', 'info');
+                client = await TransportLayerWebClient.create(serverUrl);
+                
+                // Test the connection
+                try {
+                    const testTag = create_note_tag_from_int(999999);
+                    await client.fetchNotes(testTag);
+                    isConnected = true;
+                    updateConnectionUI();
+                    showStatus('connectionStatus', `✅ Connected to ${serverUrl}`, 'success');
+                } catch (fetchError) {
+                    isConnected = false;
+                    updateConnectionUI();
+                    showStatus('connectionStatus', `❌ Server not running at ${serverUrl}`, 'error');
+                }
+            } catch (error) {
+                isConnected = false;
+                updateConnectionUI();
+                showStatus('connectionStatus', `❌ Failed to connect: ${error.message}`, 'error');
+            }
+        };
+
+        window.disconnectFromServer = function() {
+            client = null;
+            isConnected = false;
+            updateConnectionUI();
+            showStatus('connectionStatus', 'Disconnected from server', 'info');
+        };
+
+
+        window.sendNote = async function() {
+            if (!client) {
+                showStatus('sendStatus', 'Not connected to server. Please connect first.', 'error');
+                return;
+            }
+
+            const noteHex = document.getElementById('noteHex').value;
+            const targetAddressBech32 = document.getElementById('targetAddress').value;
+
+            if (!noteHex || !targetAddressBech32) {
+                showStatus('sendStatus', 'Please enter both note and target address', 'error');
+                return;
+            }
+
+            try {
+                showStatus('sendStatus', 'Parsing inputs...', 'info');
+                
+                // Parse the bech32 address
+                const address = parse_bech32_address(targetAddressBech32);
+                
+                // Parse the hex note
+                const note = parse_hex_note(noteHex);
+                
+                showStatus('sendStatus', 'Sending note...', 'info');
+                const noteId = await client.sendNote(note, address);
+                
+                showStatus('sendStatus', '✅ Note sent successfully!', 'success');
+                showOutput('sendOutput', `Note ID: ${noteId}\n\nAddress: ${targetAddressBech32}\nNote: ${noteHex.substring(0, 50)}...`);
+            } catch (error) {
+                showStatus('sendStatus', `❌ Failed to send note: ${error.message}`, 'error');
+                showOutput('sendOutput', `Error details: ${error.stack}`);
+            }
+        };
+
+        window.fetchNotes = async function() {
+            if (!client) {
+                showStatus('fetchStatus', 'Not connected to server. Please connect first.', 'error');
+                return;
+            }
+
+            const noteTagValue = document.getElementById('noteTag').value;
+
+            if (!noteTagValue) {
+                showStatus('fetchStatus', 'Please enter a note tag', 'error');
+                return;
+            }
+
+            try {
+                showStatus('fetchStatus', 'Parsing tag...', 'info');
+                
+                // Parse the integer tag
+                const tagInt = parseInt(noteTagValue, 10);
+                if (isNaN(tagInt)) {
+                    throw new Error('Note tag must be a valid integer');
+                }
+                
+                const noteTag = create_note_tag_from_int(tagInt);
+                
+                showStatus('fetchStatus', 'Fetching notes...', 'info');
+                const notes = await client.fetchNotes(noteTag);
+                
+                showStatus('fetchStatus', `✅ Fetched ${notes.length} notes successfully!`, 'success');
+                
+                // Display meaningful note information
+                let output = `Found ${notes.length} notes with tag ${tagInt}.\n\n`;
+                
+                if (notes.length === 0) {
+                    output += 'No notes found with this tag.';
+                } else {
+                    for (let i = 0; i < notes.length; i++) {
+                        const note = notes[i];
+                        try {
+                            const noteInfo = get_note_info(note);
+                            const noteTag = get_note_tag(note);
+                            const sender = get_note_sender_bech32(note);
+                            
+                            output += `--- Note ${i + 1} ---\n`;
+                            output += `Tag: ${noteTag}\n`;
+                            output += `Sender: ${sender}\n`;
+                            output += `Details:\n${noteInfo}\n\n`;
+                        } catch (noteError) {
+                            output += `--- Note ${i + 1} ---\n`;
+                            output += `Error extracting note info: ${noteError.message}\n\n`;
+                        }
+                    }
+                }
+                
+                showOutput('fetchOutput', output);
+            } catch (error) {
+                showStatus('fetchStatus', `❌ Failed to fetch notes: ${error.message}`, 'error');
+                showOutput('fetchOutput', `Error details: ${error.stack}`);
+            }
+        };
+
+        // Initialize UI
+        updateConnectionUI();
+    </script>
+</body>
+</html>

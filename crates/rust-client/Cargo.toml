@@ -23,12 +23,13 @@ path = "src/lib.rs"
 [features]
 default = ["std", "tonic/channel"]
 idxdb = [
-  #  "dep:base64",
+  "dep:base64",
   "dep:getrandom",
-  #  "dep:serde",
-  #"dep:serde-wasm-bindgen",
-  #"dep:wasm-bindgen",
-  #"dep:wasm-bindgen-futures",
+  "dep:serde-wasm-bindgen",
+  "dep:wasm-bindgen",
+  "dep:wasm-bindgen-futures",
+  "dep:web-sys",
+  "dep:js-sys",
 ]
 sqlite = ["dep:sqlx", "std"]
 std = [
@@ -97,10 +98,13 @@ rand = { workspace = true }
 
 # WASM
 getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
-#serde-wasm-bindgen    = { optional = true, version = "0.6" }
+serde-wasm-bindgen    = { optional = true, version = "0.6" }
 tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
-#wasm-bindgen          = { features = ["serde-serialize"], optional = true, version = "0.2" }
-#wasm-bindgen-futures  = { optional = true, version = "0.4" }
+wasm-bindgen          = { features = ["serde-serialize"], optional = true, version = "0.2" }
+wasm-bindgen-futures  = { optional = true, version = "0.4" }
+web-sys               = { optional = true, version = "0.3", features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
+js-sys                = { optional = true, version = "0.3" }
+base64                = { optional = true, version = "0.22" }
 
 
 [dev-dependencies]
