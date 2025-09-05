@@ -1,4 +1,8 @@
-// Re-export miden-objects
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
+
 use chrono::{DateTime, Utc};
 use miden_lib::{account::wallets::BasicWallet, note::create_p2id_note};
 pub use miden_objects::{
@@ -169,7 +173,7 @@ pub fn mock_note_p2id_with_addresses(
     use rand::RngCore;
 
     let mut randrng = rand::rng();
-    let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
+    let seed: [Felt; 4] = core::array::from_fn(|_| Felt::new(randrng.next_u64()));
     let mut rng = RpoRandomCoin::new(seed.into());
     let sender_id = address_to_account_id(sender).unwrap();
     let target_id = address_to_account_id(target).unwrap();
@@ -192,7 +196,7 @@ pub fn mock_note_p2id_with_tag_and_addresses(
     use rand::{Rng, RngCore};
 
     let mut randrng = rand::rng();
-    let seed: [Felt; 4] = std::array::from_fn(|_| Felt::new(randrng.next_u64()));
+    let seed: [Felt; 4] = core::array::from_fn(|_| Felt::new(randrng.next_u64()));
     let mut rng = RpoRandomCoin::new(seed.into());
     let serial_num = rng.draw_word();
     let sender_id = address_to_account_id(sender).unwrap();

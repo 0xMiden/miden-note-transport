@@ -1,0 +1,110 @@
+[package]
+authors.workspace      = true
+description            = "Miden Private Notes Transport Client"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["messaging", "miden"]
+license.workspace      = true
+name                   = "miden-private-transport-client"
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[package.metadata.cargo-machete]
+ignored = ["getrandom"]
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["std", "tonic/channel"]
+idxdb = [
+  #  "dep:base64",
+  "dep:getrandom",
+  #  "dep:serde",
+  #"dep:serde-wasm-bindgen",
+  #"dep:wasm-bindgen",
+  #"dep:wasm-bindgen-futures",
+]
+sqlite = ["dep:sqlx", "std"]
+std = [
+  "dep:opentelemetry",
+  "dep:opentelemetry-otlp",
+  "dep:opentelemetry_sdk",
+  "dep:tracing-opentelemetry",
+  "dep:tracing-subscriber",
+  "miden-objects/std",
+  "rand/std",
+]
+tonic = [
+  "miden-private-transport-proto/transport",
+  "std",
+  "tonic/tls-native-roots",
+  "tonic/tls-ring",
+  "tonic/transport",
+]
+web-tonic = ["dep:getrandom", "dep:tonic-web-wasm-client"]
+
+[dependencies]
+# Proto
+miden-private-transport-proto = { workspace = true }
+
+# Miden
+miden-lib     = { default-features = false, version = "0.11.1" }
+miden-objects = { workspace = true }
+miden-testing = { default-features = false, version = "0.11.1" }
+
+# gRPC server and client
+tonic        = { workspace = true }
+tonic-health = { workspace = true }
+tower        = { features = ["timeout"], version = "0.5" }
+
+# Serialization
+serde      = { workspace = true }
+serde_json = { workspace = true }
+
+# Protobuf
+prost-types = { workspace = true }
+
+# Database
+sqlx = { optional = true, workspace = true }
+
+# Logging
+opentelemetry         = { optional = true, workspace = true }
+opentelemetry-otlp    = { optional = true, workspace = true }
+opentelemetry_sdk     = { optional = true, workspace = true }
+tracing               = { workspace = true }
+tracing-opentelemetry = { optional = true, workspace = true }
+tracing-subscriber    = { optional = true, workspace = true }
+
+# Error handling
+anyhow    = { workspace = true }
+thiserror = { workspace = true }
+
+# Async traits
+async-trait = { workspace = true }
+futures     = { workspace = true }
+
+# Time handling
+chrono = { workspace = true }
+
+# Generic
+rand = { workspace = true }
+
+# WASM
+getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
+#serde-wasm-bindgen    = { optional = true, version = "0.6" }
+tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
+#wasm-bindgen          = { features = ["serde-serialize"], optional = true, version = "0.2" }
+#wasm-bindgen-futures  = { optional = true, version = "0.4" }
+
+
+[dev-dependencies]
+miden-private-transport-client = { features = ["sqlite", "tonic"], workspace = true }
+miden-private-transport-node   = { workspace = true }
+serial_test                    = { workspace = true }
+tokio                          = { workspace = true }

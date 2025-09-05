@@ -6,7 +6,7 @@ use futures::StreamExt;
 use miden_objects::{account::NetworkId, address::Address, note::Note, utils::Deserializable};
 use miden_private_transport_client::{
     Error, Result, TransportLayerClient,
-    database::DatabaseConfig,
+    database::{Database, DatabaseConfig},
     grpc::GrpcClient,
     logging::{OpenTelemetry, setup_tracing},
     types::{mock_address, mock_note_p2id_with_addresses},
@@ -115,8 +115,8 @@ async fn main() -> Result<()> {
 
     // Create client
     let mut grpc = GrpcClient::connect(args.endpoint, args.timeout).await?;
-    let mut client =
-        TransportLayerClient::init(Box::new(grpc.clone()), vec![], Some(db_config)).await?;
+    let db = Database::new_sqlite(db_config).await?;
+    let mut client = TransportLayerClient::new(Box::new(grpc.clone()), db, vec![]);
 
     match args.command {
         Commands::Send { note, recipient } => {

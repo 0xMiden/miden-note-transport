@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{boxed::Box, str::FromStr};
 
 use anyhow::Result;
 use opentelemetry::trace::TracerProvider as _;

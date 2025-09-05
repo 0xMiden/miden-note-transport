@@ -14,10 +14,15 @@ version.workspace      = true
 [lints]
 workspace = true
 
+[features]
+default = ["transport"]
+# If 'transport' disabled, this crate provides only a transport-free client
+transport = ["tonic/transport"]
+
 [dependencies]
-prost           = "0.13"
-prost-types     = { workspace = true }
-tonic.workspace = true
+prost       = { default-features = false, version = "0.13" }
+prost-types = { workspace = true }
+tonic       = { features = ["codegen", "prost"], workspace = true }
 
 [build-dependencies]
-tonic-build = "0.13"
+tonic-build = { version = "0.13" }

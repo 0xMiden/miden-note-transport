@@ -1,5 +1,12 @@
 [workspace]
-members  = ["bin/cli", "bin/node", "crates/client", "crates/node", "crates/proto"]
+members = [
+  "bin/cli",
+  "bin/node",
+  "crates/rust-client",
+  #"crates/web-client",
+  "crates/node",
+  "crates/proto",
+]
 resolver = "2"
 
 [workspace.package]
@@ -15,17 +22,17 @@ version      = "0.1.0"
 
 [workspace.dependencies]
 # Workspace crates (path-based dependencies)
-miden-private-transport-client = { path = "crates/client", version = "0.1" }
+miden-private-transport-client = { default-features = false, path = "crates/rust-client", version = "0.1" }
 miden-private-transport-node   = { path = "crates/node", version = "0.1" }
-miden-private-transport-proto  = { path = "crates/proto", version = "0.1" }
+miden-private-transport-proto  = { default-features = false, path = "crates/proto", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
+miden-objects = { default-features = false, version = "0.11.1" }
 
 # Other miden dependencies. These should align with those expected by miden-base.
-miden-objects = { features = ["testing"], version = "0.11.1" }
 
 # External dependencies
-anyhow = { version = "1.0" }
+anyhow = { default-features = false, version = "1.0" }
 async-trait = { version = "0.1" }
 base64 = { version = "0.22" }
 chrono = { features = ["serde"], version = "0.4" }
@@ -40,15 +47,15 @@ opentelemetry-otlp = { default-features = false, features = [
   "trace",
 ], version = "0.30" }
 opentelemetry_sdk = { features = ["metrics", "rt-tokio", "testing"], version = "0.30" }
-prost-types = { version = "0.13" }
+prost-types = { default-features = false, version = "0.13" }
 rand = { version = "0.9" }
 serde = { features = ["derive"], version = "1.0" }
 serde_json = { version = "1.0" }
 serial_test = { version = "3.2" }
 sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
 thiserror = { default-features = false, version = "2.0" }
-tokio = { version = "1.47" }
-tonic = { version = "0.13" }
+tokio = { features = ["macros", "net", "rt-multi-thread"], version = "1.47" }
+tonic = { default-features = false, version = "0.13" }
 tonic-health = { version = "0.13" }
 tracing = { version = "0.1" }
 tracing-opentelemetry = { version = "0.31" }

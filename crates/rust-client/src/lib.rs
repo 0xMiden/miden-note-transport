@@ -1,10 +1,19 @@
+#![no_std]
+
+#[macro_use]
+extern crate alloc;
+use alloc::{boxed::Box, vec::Vec};
+
+#[cfg(feature = "std")]
+extern crate std;
+
 pub mod database;
 pub mod error;
 pub mod grpc;
+#[cfg(feature = "std")]
 pub mod logging;
 pub mod types;
 
-// Re-exports
 use futures::Stream;
 use miden_objects::{
     address::Address,
@@ -12,7 +21,7 @@ use miden_objects::{
 };
 
 use self::{
-    database::{Database, DatabaseConfig},
+    database::Database,
     types::{Note, NoteDetails, NoteHeader, NoteId, NoteInfo, NoteStatus, NoteTag},
 };
 pub use self::{
@@ -21,7 +30,8 @@ pub use self::{
 };
 
 /// The main transport client trait for sending and receiving encrypted notes
-#[async_trait::async_trait]
+#[cfg_attr(not(feature = "web-tonic"), async_trait::async_trait)]
+#[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 pub trait TransportClient: Send + Sync {
     /// Send a note with optionally encrypted details
     async fn send_note(
@@ -43,21 +53,19 @@ pub trait NoteStream: Stream<Item = Result<Vec<NoteInfo>>> + Send + Unpin {}
 /// Client for interacting with the transport layer
 pub struct TransportLayerClient {
     transport_client: Box<dyn TransportClient>,
-    /// Owned addresses
-    addresses: Vec<Address>,
     /// Client database for persistent state
     database: Database,
+    /// Owned addresses
+    addresses: Vec<Address>,
 }
 
 impl TransportLayerClient {
-    pub async fn init(
+    pub fn new(
         transport_client: Box<dyn TransportClient>,
+        database: Database,
         addresses: Vec<Address>,
-        database_config: Option<DatabaseConfig>,
-    ) -> Result<Self> {
-        let database = Database::new_sqlite(database_config.unwrap_or_default()).await?;
-
-        Ok(Self { transport_client, addresses, database })
+    ) -> Self {
+        Self { transport_client, database, addresses }
     }
 
     /// Send a note to a recipient
@@ -111,17 +119,17 @@ impl TransportLayerClient {
 
     /// Check if a note has been fetched before
     pub async fn note_fetched(&self, note_id: &NoteId) -> Result<bool> {
-        self.database.note_fetched(note_id).await
+        self.database.note_fetched(note_id).await.map_err(Error::from)
     }
 
     /// Get all fetched note IDs for a specific tag
     pub async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>> {
-        self.database.get_fetched_notes_for_tag(tag).await
+        self.database.get_fetched_notes_for_tag(tag).await.map_err(Error::from)
     }
 
     /// Get an stored note from the database
     pub async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<database::StoredNote>> {
-        self.database.get_stored_note(note_id).await
+        self.database.get_stored_note(note_id).await.map_err(Error::from)
     }
 
     /// Get all stored notes for a specific tag
@@ -129,17 +137,17 @@ impl TransportLayerClient {
         &self,
         tag: NoteTag,
     ) -> Result<Vec<database::StoredNote>> {
-        self.database.get_stored_notes_for_tag(tag).await
+        self.database.get_stored_notes_for_tag(tag).await.map_err(Error::from)
     }
 
     /// Get database statistics
     pub async fn get_database_stats(&self) -> Result<database::DatabaseStats> {
-        self.database.get_stats().await
+        self.database.get_stats().await.map_err(Error::from)
     }
 
     /// Clean up old data based on retention policy
     pub async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64> {
-        self.database.cleanup_old_data(retention_days).await
+        self.database.cleanup_old_data(retention_days).await.map_err(Error::from)
     }
 
     /// Register a tag

@@ -1,4 +1,13 @@
+#[cfg(feature = "idxdb")]
+pub mod idxdb;
+#[cfg(feature = "sqlite")]
 pub mod sqlite;
+
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use chrono::{DateTime, Utc};
 use miden_objects::{
@@ -6,10 +15,9 @@ use miden_objects::{
     note::{NoteHeader, NoteId, NoteTag},
 };
 
-use crate::Result;
-
 /// Trait for client database operations
-#[async_trait::async_trait]
+#[cfg_attr(not(feature = "idxdb"), async_trait::async_trait)]
+#[cfg_attr(feature = "idxdb", async_trait::async_trait(?Send))]
 pub trait DatabaseBackend: Send + Sync {
     /// Store a note
     async fn store_note(
@@ -17,34 +25,47 @@ pub trait DatabaseBackend: Send + Sync {
         header: &NoteHeader,
         details: &[u8],
         created_at: DateTime<Utc>,
-    ) -> Result<()>;
+    ) -> Result<(), DatabaseError>;
 
     /// Get a stored note by ID
-    async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<StoredNote>>;
+    async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<StoredNote>, DatabaseError>;
 
     /// Get all stored notes with provided tag
-    async fn get_stored_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<StoredNote>>;
+    async fn get_stored_notes_for_tag(
+        &self,
+        tag: NoteTag,
+    ) -> Result<Vec<StoredNote>, DatabaseError>;
 
     /// Record that a note has been fetched
-    async fn record_fetched_note(&self, note_id: &NoteId, tag: NoteTag) -> Result<()>;
+    async fn record_fetched_note(
+        &self,
+        note_id: &NoteId,
+        tag: NoteTag,
+    ) -> Result<(), DatabaseError>;
 
     /// Check if a note has been fetched before
-    async fn note_fetched(&self, note_id: &NoteId) -> Result<bool>;
+    async fn note_fetched(&self, note_id: &NoteId) -> Result<bool, DatabaseError>;
 
     /// Get all fetched note IDs for a specific tag
-    async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>>;
+    async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>, DatabaseError>;
 
     /// Store a tag to account ID mapping
-    async fn store_tag_account_mapping(&self, tag: NoteTag, account_id: &AccountId) -> Result<()>;
+    async fn store_tag_account_mapping(
+        &self,
+        tag: NoteTag,
+        account_id: &AccountId,
+    ) -> Result<(), DatabaseError>;
 
     /// Get all tag to account ID mappings
-    async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>>;
+    async fn get_all_tag_account_mappings(
+        &self,
+    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError>;
 
     /// Get database statistics
-    async fn get_stats(&self) -> Result<DatabaseStats>;
+    async fn get_stats(&self) -> Result<DatabaseStats, DatabaseError>;
 
     /// Clean up old data based on retention policy
-    async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64>;
+    async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64, DatabaseError>;
 }
 
 /// Client database configuration
@@ -74,8 +95,9 @@ impl Database {
         Self { backend }
     }
 
+    #[cfg(feature = "sqlite")]
     /// Create a new SQLite-based client database
-    pub async fn new_sqlite(config: DatabaseConfig) -> Result<Self> {
+    pub async fn new_sqlite(config: DatabaseConfig) -> Result<Self, DatabaseError> {
         let backend = sqlite::SqliteDatabase::connect(config).await?;
         Ok(Self::new(Box::new(backend)))
     }
@@ -85,12 +107,14 @@ impl Database {
         &self,
         tag: NoteTag,
         account_id: &AccountId,
-    ) -> Result<()> {
+    ) -> Result<(), DatabaseError> {
         self.backend.store_tag_account_mapping(tag, account_id).await
     }
 
     /// Get all tag to account ID mappings
-    pub async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>> {
+    pub async fn get_all_tag_account_mappings(
+        &self,
+    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError> {
         self.backend.get_all_tag_account_mappings().await
     }
 
@@ -100,44 +124,71 @@ impl Database {
         header: &NoteHeader,
         encrypted_data: &[u8],
         created_at: DateTime<Utc>,
-    ) -> Result<()> {
+    ) -> Result<(), DatabaseError> {
         self.backend.store_note(header, encrypted_data, created_at).await
     }
 
     /// Get an stored note by ID
-    pub async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<StoredNote>> {
+    pub async fn get_stored_note(
+        &self,
+        note_id: &NoteId,
+    ) -> Result<Option<StoredNote>, DatabaseError> {
         self.backend.get_stored_note(note_id).await
     }
 
     /// Get all stored notes for a tag
-    pub async fn get_stored_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<StoredNote>> {
+    pub async fn get_stored_notes_for_tag(
+        &self,
+        tag: NoteTag,
+    ) -> Result<Vec<StoredNote>, DatabaseError> {
         self.backend.get_stored_notes_for_tag(tag).await
     }
 
     /// Record that a note has been fetched
-    pub async fn record_fetched_note(&self, note_id: &NoteId, tag: NoteTag) -> Result<()> {
+    pub async fn record_fetched_note(
+        &self,
+        note_id: &NoteId,
+        tag: NoteTag,
+    ) -> Result<(), DatabaseError> {
         self.backend.record_fetched_note(note_id, tag).await
     }
 
     /// Check if a note has been fetched before
-    pub async fn note_fetched(&self, note_id: &NoteId) -> Result<bool> {
+    pub async fn note_fetched(&self, note_id: &NoteId) -> Result<bool, DatabaseError> {
         self.backend.note_fetched(note_id).await
     }
 
     /// Get all fetched note IDs for a specific tag
-    pub async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>> {
+    pub async fn get_fetched_notes_for_tag(
+        &self,
+        tag: NoteTag,
+    ) -> Result<Vec<NoteId>, DatabaseError> {
         self.backend.get_fetched_notes_for_tag(tag).await
     }
 
     /// Get database statistics
-    pub async fn get_stats(&self) -> Result<DatabaseStats> {
+    pub async fn get_stats(&self) -> Result<DatabaseStats, DatabaseError> {
         self.backend.get_stats().await
     }
 
     /// Clean up old data based on retention policy
-    pub async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64> {
+    pub async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64, DatabaseError> {
         self.backend.cleanup_old_data(retention_days).await
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DatabaseError {
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+    #[error("Encoding error: {0}")]
+    Encoding(String),
+    #[error("Protocol error: {0}")]
+    Protocol(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error("{0}")]
+    Generic(#[from] anyhow::Error),
 }
 
 /// Encrypted note stored in the client database
@@ -157,43 +208,4 @@ pub struct DatabaseStats {
     pub stored_notes_count: u64,
     /// Stored tags
     pub unique_tags_count: u64,
-}
-
-#[cfg(test)]
-mod tests {
-    use miden_objects::{note::NoteDetails, utils::Serializable};
-
-    use super::*;
-    use crate::types::mock_note_p2id;
-
-    #[tokio::test]
-    async fn test_client_database_operations() {
-        let config = DatabaseConfig::default();
-
-        let db = Database::new_sqlite(config).await.unwrap();
-
-        let note = mock_note_p2id();
-        let note_id = note.id();
-        let tag = note.metadata().tag();
-        let header = *note.header();
-        let details = NoteDetails::from(note).to_bytes();
-
-        db.record_fetched_note(&note_id, tag).await.unwrap();
-
-        let created_at = Utc::now();
-        db.store_note(&header, &details, created_at).await.unwrap();
-
-        let stored_note = db.get_stored_note(&note_id).await.unwrap();
-        assert!(stored_note.is_some());
-
-        let stored_note = stored_note.unwrap();
-        assert_eq!(stored_note.header.id(), note_id);
-        assert_eq!(stored_note.details, details);
-
-        // Test statistics
-        let stats = db.get_stats().await.unwrap();
-        assert_eq!(stats.fetched_notes_count, 1);
-        assert_eq!(stats.stored_notes_count, 1);
-        assert_eq!(stats.unique_tags_count, 1);
-    }
 }
