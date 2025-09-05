@@ -1,10 +1,15 @@
+use alloc::{boxed::Box, string::String};
+
 use thiserror::Error;
+
+use crate::database::DatabaseError;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
+    Database(#[from] DatabaseError),
 
+    #[cfg(feature = "std")]
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -14,6 +19,7 @@ pub enum Error {
     #[error("gRPC error: {0}")]
     GrpcStatus(Box<tonic::Status>),
 
+    #[cfg(feature = "tonic")]
     #[error("gRPC error: {0}")]
     GrpcTransport(#[from] tonic::transport::Error),
 
@@ -45,4 +51,4 @@ impl From<tonic::Status> for Error {
     }
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;

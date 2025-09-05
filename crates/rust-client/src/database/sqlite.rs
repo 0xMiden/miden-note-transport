@@ -1,3 +1,9 @@
+use std::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
+
 use chrono::{DateTime, Utc};
 use miden_objects::{
     account::AccountId,
@@ -6,8 +12,7 @@ use miden_objects::{
 };
 use sqlx::{Row, SqlitePool};
 
-use super::{DatabaseBackend, DatabaseConfig, DatabaseStats, StoredNote};
-use crate::Result;
+use super::{DatabaseBackend, DatabaseConfig, DatabaseError, DatabaseStats, StoredNote};
 
 /// `SQLite` implementation of the client database
 pub struct SqliteDatabase {
@@ -16,9 +21,9 @@ pub struct SqliteDatabase {
 
 impl SqliteDatabase {
     /// Connect to the `SQLite` client database
-    pub async fn connect(config: DatabaseConfig) -> Result<Self> {
+    pub async fn connect(config: DatabaseConfig) -> Result<Self, DatabaseError> {
         if !std::path::Path::new(&config.url).exists() && !config.url.contains(":memory:") {
-            std::fs::File::create(&config.url).map_err(crate::Error::Io)?;
+            std::fs::File::create(&config.url).map_err(anyhow::Error::new)?;
         }
         let url = format!("sqlite:{}", config.url);
 
@@ -31,7 +36,7 @@ impl SqliteDatabase {
     }
 
     /// Create all necessary tables
-    async fn create_tables(pool: &SqlitePool) -> Result<()> {
+    async fn create_tables(pool: &SqlitePool) -> Result<(), DatabaseError> {
         // Table for storing fetched note IDs
         sqlx::query(
             r"
@@ -96,7 +101,7 @@ impl DatabaseBackend for SqliteDatabase {
         header: &NoteHeader,
         details: &[u8],
         created_at: DateTime<Utc>,
-    ) -> Result<()> {
+    ) -> Result<(), DatabaseError> {
         let note_id = header.id();
         let tag = header.metadata().tag();
         let header_bytes = header.to_bytes();
@@ -118,7 +123,7 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(())
     }
 
-    async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<StoredNote>> {
+    async fn get_stored_note(&self, note_id: &NoteId) -> Result<Option<StoredNote>, DatabaseError> {
         let row = sqlx::query(
             r"
             SELECT tag, header, details, created_at
@@ -134,19 +139,10 @@ impl DatabaseBackend for SqliteDatabase {
             let details: Vec<u8> = row.try_get("details")?;
             let created_at_str: String = row.try_get("created_at")?;
 
-            let header = NoteHeader::read_from_bytes(&header_bytes).map_err(|e| {
-                crate::Error::Database(sqlx::Error::ColumnDecode {
-                    index: "header".to_string(),
-                    source: Box::new(e),
-                })
-            })?;
+            let header = NoteHeader::read_from_bytes(&header_bytes)
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
             let created_at = DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|e| {
-                    crate::Error::Database(sqlx::Error::ColumnDecode {
-                        index: "created_at".to_string(),
-                        source: Box::new(e),
-                    })
-                })?
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?
                 .with_timezone(&Utc);
 
             Ok(Some(StoredNote { header, details, created_at }))
@@ -155,7 +151,10 @@ impl DatabaseBackend for SqliteDatabase {
         }
     }
 
-    async fn get_stored_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<StoredNote>> {
+    async fn get_stored_notes_for_tag(
+        &self,
+        tag: NoteTag,
+    ) -> Result<Vec<StoredNote>, DatabaseError> {
         let rows = sqlx::query(
             r"
             SELECT note_id, header, details, created_at
@@ -173,19 +172,10 @@ impl DatabaseBackend for SqliteDatabase {
             let details: Vec<u8> = row.try_get("details")?;
             let created_at_str: String = row.try_get("created_at")?;
 
-            let header = NoteHeader::read_from_bytes(&header_bytes).map_err(|e| {
-                crate::Error::Database(sqlx::Error::ColumnDecode {
-                    index: "header".to_string(),
-                    source: Box::new(e),
-                })
-            })?;
+            let header = NoteHeader::read_from_bytes(&header_bytes)
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
             let created_at = DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|e| {
-                    crate::Error::Database(sqlx::Error::ColumnDecode {
-                        index: "created_at".to_string(),
-                        source: Box::new(e),
-                    })
-                })?
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?
                 .with_timezone(&Utc);
 
             notes.push(StoredNote { header, details, created_at });
@@ -194,7 +184,11 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(notes)
     }
 
-    async fn record_fetched_note(&self, note_id: &NoteId, tag: NoteTag) -> Result<()> {
+    async fn record_fetched_note(
+        &self,
+        note_id: &NoteId,
+        tag: NoteTag,
+    ) -> Result<(), DatabaseError> {
         let now = Utc::now();
 
         sqlx::query(
@@ -212,7 +206,7 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(())
     }
 
-    async fn note_fetched(&self, note_id: &NoteId) -> Result<bool> {
+    async fn note_fetched(&self, note_id: &NoteId) -> Result<bool, DatabaseError> {
         let row = sqlx::query(
             r"
             SELECT 1 FROM fetched_notes WHERE note_id = ?
@@ -225,7 +219,7 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(row.is_some())
     }
 
-    async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>> {
+    async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>, DatabaseError> {
         let rows = sqlx::query(
             r"
             SELECT note_id FROM fetched_notes WHERE tag = ?
@@ -239,19 +233,15 @@ impl DatabaseBackend for SqliteDatabase {
         let mut note_ids = Vec::new();
         for row in rows {
             let note_id_bytes: Vec<u8> = row.try_get("note_id")?;
-            let note_id = NoteId::read_from_bytes(&note_id_bytes).map_err(|e| {
-                crate::Error::Database(sqlx::Error::ColumnDecode {
-                    index: "note_id".to_string(),
-                    source: Box::new(e),
-                })
-            })?;
+            let note_id = NoteId::read_from_bytes(&note_id_bytes)
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
             note_ids.push(note_id);
         }
 
         Ok(note_ids)
     }
 
-    async fn get_stats(&self) -> Result<DatabaseStats> {
+    async fn get_stats(&self) -> Result<DatabaseStats, DatabaseError> {
         let fetched_notes_count: u64 = sqlx::query_scalar("SELECT COUNT(*) FROM fetched_notes")
             .fetch_one(&self.pool)
             .await?;
@@ -272,7 +262,7 @@ impl DatabaseBackend for SqliteDatabase {
         })
     }
 
-    async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64> {
+    async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64, DatabaseError> {
         let cutoff_date = Utc::now() - chrono::Duration::days(i64::from(retention_days));
 
         let result = sqlx::query(
@@ -287,7 +277,11 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(result.rows_affected())
     }
 
-    async fn store_tag_account_mapping(&self, tag: NoteTag, account_id: &AccountId) -> Result<()> {
+    async fn store_tag_account_mapping(
+        &self,
+        tag: NoteTag,
+        account_id: &AccountId,
+    ) -> Result<(), DatabaseError> {
         let now = Utc::now();
 
         sqlx::query(
@@ -305,7 +299,9 @@ impl DatabaseBackend for SqliteDatabase {
         Ok(())
     }
 
-    async fn get_all_tag_account_mappings(&self) -> Result<Vec<(NoteTag, AccountId)>> {
+    async fn get_all_tag_account_mappings(
+        &self,
+    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError> {
         let rows = sqlx::query(
             r"
             SELECT tag, account_id FROM tag_account_mappings
@@ -321,16 +317,64 @@ impl DatabaseBackend for SqliteDatabase {
             let account_id_bytes: Vec<u8> = row.try_get("account_id")?;
 
             let tag = NoteTag::from(tag);
-            let account_id = AccountId::read_from_bytes(&account_id_bytes).map_err(|e| {
-                crate::Error::Database(sqlx::Error::ColumnDecode {
-                    index: "account_id".to_string(),
-                    source: Box::new(e),
-                })
-            })?;
+            let account_id = AccountId::read_from_bytes(&account_id_bytes)
+                .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
 
             mappings.push((tag, account_id));
         }
 
         Ok(mappings)
+    }
+}
+
+impl From<sqlx::Error> for DatabaseError {
+    fn from(se: sqlx::Error) -> Self {
+        match se {
+            sqlx::Error::Configuration(e) => Self::Configuration(e.to_string()),
+            sqlx::Error::Protocol(e) => Self::Protocol(e.to_string()),
+            sqlx::Error::RowNotFound => Self::NotFound("Row not found".to_string()),
+            sqlx::Error::TypeNotFound { type_name } => Self::NotFound(type_name),
+            sqlx::Error::ColumnNotFound(e) => Self::NotFound(e),
+            e => anyhow::Error::new(e).into(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use miden_objects::{note::NoteDetails, utils::Serializable};
+
+    use super::{super::Database, *};
+    use crate::types::mock_note_p2id;
+
+    #[tokio::test]
+    async fn test_client_database_sqlite_operations() {
+        let config = DatabaseConfig::default();
+
+        let db = Database::new_sqlite(config).await.unwrap();
+
+        let note = mock_note_p2id();
+        let note_id = note.id();
+        let tag = note.metadata().tag();
+        let header = *note.header();
+        let details = NoteDetails::from(note).to_bytes();
+
+        db.record_fetched_note(&note_id, tag).await.unwrap();
+
+        let created_at = Utc::now();
+        db.store_note(&header, &details, created_at).await.unwrap();
+
+        let stored_note = db.get_stored_note(&note_id).await.unwrap();
+        assert!(stored_note.is_some());
+
+        let stored_note = stored_note.unwrap();
+        assert_eq!(stored_note.header.id(), note_id);
+        assert_eq!(stored_note.details, details);
+
+        // Test statistics
+        let stats = db.get_stats().await.unwrap();
+        assert_eq!(stats.fetched_notes_count, 1);
+        assert_eq!(stats.stored_notes_count, 1);
+        assert_eq!(stats.unique_tags_count, 1);
     }
 }

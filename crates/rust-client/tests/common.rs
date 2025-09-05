@@ -2,7 +2,10 @@ use std::time::Duration;
 
 use miden_objects::address::Address;
 use miden_private_transport_client::{
-    TransportLayerClient, database::DatabaseConfig, grpc::GrpcClient, types::mock_address,
+    TransportLayerClient,
+    database::{Database, DatabaseConfig},
+    grpc::GrpcClient,
+    types::mock_address,
 };
 use miden_private_transport_node::{Node, NodeConfig, node::grpc::GrpcServerConfig};
 use tokio::{task::JoinHandle, time::sleep};
@@ -29,9 +32,8 @@ pub async fn test_client(port: u16) -> (TransportLayerClient, Address) {
     let address = mock_address();
 
     let db_config = DatabaseConfig::default();
-    let client = TransportLayerClient::init(grpc_client, vec![address.clone()], Some(db_config))
-        .await
-        .unwrap();
+    let db = Database::new_sqlite(db_config).await.unwrap();
+    let client = TransportLayerClient::new(grpc_client, db, vec![address.clone()]);
 
     (client, address)
 }

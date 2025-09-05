@@ -22,11 +22,11 @@ path = "src/lib.rs"
 miden-private-transport-proto = { workspace = true }
 
 # Miden
-miden-objects = { workspace = true }
+miden-objects = { features = ["testing"], workspace = true }
 
 # gRPC server and client
 tokio        = { workspace = true }
-tonic        = { workspace = true }
+tonic        = { default-features = true, workspace = true }
 tonic-health = { workspace = true }
 
 # Serialization

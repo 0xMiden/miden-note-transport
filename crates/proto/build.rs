@@ -9,14 +9,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let generated_transport_dir = "src/generated_transport";
     let generated_dir = "src/generated";
 
     // Create the generated directory if it doesn't exist
     std::fs::create_dir_all(generated_dir)?;
 
+    // generate with 'transport'
     tonic_build::configure()
         .build_server(true)
         .build_client(true)
+        .build_transport(true)
+        .out_dir(generated_transport_dir)
+        .compile_protos(
+            &["../proto/miden-private-transport.proto"],
+            &["../proto", "../proto/miden-node/proto/proto"],
+        )?;
+
+    // generate without 'transport'
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(true)
+        .build_transport(false)
         .out_dir(generated_dir)
         .compile_protos(
             &["../proto/miden-private-transport.proto"],

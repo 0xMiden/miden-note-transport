@@ -12,12 +12,12 @@ WARNINGS=RUSTDOCFLAGS="-D warnings"
 
 .PHONY: clippy
 clippy: ## Runs Clippy with configs
-	CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --all-features --workspace -- -D warnings
+	CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --workspace -- -D warnings
 
 
 .PHONY: fix
 fix: ## Runs Fix with configs
-	cargo fix --allow-staged --allow-dirty --all-targets --all-features --workspace
+	cargo fix --allow-staged --allow-dirty --all-targets --workspace
 
 
 .PHONY: format
@@ -55,7 +55,7 @@ lint: format fix clippy toml workspace-check ## Runs all linting tasks at once (
 
 .PHONY: doc
 doc: ## Generates & checks documentation
-	$(WARNINGS) cargo doc --all-features --keep-going --release --locked
+	$(WARNINGS) cargo doc --keep-going --release --locked
 
 .PHONY: book
 book: ## Builds the book & serves documentation site
@@ -65,7 +65,7 @@ book: ## Builds the book & serves documentation site
 
 .PHONY: test
 test:  ## Runs all tests
-	cargo nextest run --all-features --workspace
+	cargo nextest run --workspace
 
 .PHONY: doc-test
 doc-test: ## Runs doc tests
@@ -75,7 +75,7 @@ doc-test: ## Runs doc tests
 
 .PHONY: check
 check: ## Check all targets and features for errors without code generation
-	cargo check --all-features --all-targets --locked --workspace
+	cargo check --all-targets --locked --workspace
 
 # --- building ------------------------------------------------------------------------------------
 

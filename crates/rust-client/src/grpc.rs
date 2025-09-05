@@ -1,5 +1,16 @@
-use std::{
-    collections::HashMap,
+#[cfg(all(feature = "tonic", feature = "web-tonic"))]
+compile_error!("features `tonic` and `web-tonic` are mutually exclusive");
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "web-tonic"))]
+compile_error!("The `web-tonic` feature is only supported when targeting wasm32.");
+
+use alloc::{
+    boxed::Box,
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::{
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
@@ -13,10 +24,9 @@ use miden_private_transport_proto::miden_private_transport::{
     miden_private_transport_client::MidenPrivateTransportClient,
 };
 use prost_types;
-use tonic::{
-    Request, Streaming,
-    transport::{Channel, ClientTlsConfig},
-};
+#[cfg(feature = "tonic")]
+use tonic::transport::{Channel, ClientTlsConfig};
+use tonic::{Request, Streaming};
 use tonic_health::pb::{HealthCheckRequest, health_client::HealthClient};
 use tower::timeout::Timeout;
 
@@ -25,15 +35,21 @@ use crate::{
     types::{NoteHeader, NoteId, NoteInfo, NoteTag, proto_timestamp_to_datetime},
 };
 
+#[cfg(feature = "tonic")]
+type Service = Timeout<Channel>;
+#[cfg(feature = "web-tonic")]
+type Service = tonic_web_wasm_client::Client;
+
 #[derive(Clone)]
 pub struct GrpcClient {
-    client: MidenPrivateTransportClient<Timeout<Channel>>,
-    health_client: HealthClient<Timeout<Channel>>,
+    client: MidenPrivateTransportClient<Service>,
+    health_client: HealthClient<Service>,
     // Last fetched timestamp
-    lts: HashMap<NoteTag, DateTime<Utc>>,
+    lts: BTreeMap<NoteTag, DateTime<Utc>>,
 }
 
 impl GrpcClient {
+    #[cfg(feature = "tonic")]
     pub async fn connect(endpoint: String, timeout_ms: u64) -> Result<Self> {
         let tls = ClientTlsConfig::new().with_native_roots();
         let channel = Channel::from_shared(endpoint.clone())
@@ -45,7 +61,17 @@ impl GrpcClient {
         let timeout_channel = Timeout::new(channel, timeout);
         let health_client = HealthClient::new(timeout_channel.clone());
         let client = MidenPrivateTransportClient::new(timeout_channel);
-        let lts = HashMap::new();
+        let lts = BTreeMap::new();
+
+        Ok(Self { client, health_client, lts })
+    }
+
+    #[cfg(feature = "web-tonic")]
+    pub async fn connect(endpoint: String, _timeout_ms: u64) -> Result<Self> {
+        let client = tonic_web_wasm_client::Client::new(endpoint);
+        let health_client = HealthClient::new(client.clone());
+        let client = MidenPrivateTransportClient::new(client.clone());
+        let lts = BTreeMap::new();
 
         Ok(Self { client, health_client, lts })
     }
@@ -170,7 +196,8 @@ impl GrpcClient {
     }
 }
 
-#[async_trait::async_trait]
+#[cfg_attr(not(feature = "web-tonic"), async_trait::async_trait)]
+#[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 impl super::TransportClient for GrpcClient {
     async fn send_note(
         &mut self,
