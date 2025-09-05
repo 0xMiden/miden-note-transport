@@ -3,7 +3,12 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use futures::StreamExt;
-use miden_objects::{account::NetworkId, address::Address, note::Note, utils::Deserializable};
+use miden_objects::{
+    account::NetworkId,
+    address::Address,
+    note::{Note, NoteDetails},
+    utils::Deserializable,
+};
 use miden_private_transport_client::{
     Error, Result, TransportLayerClient,
     database::{Database, DatabaseConfig},
@@ -181,8 +186,13 @@ async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> 
 
     info!("Found {} notes", decrypted_notes.len());
 
-    for (i, (header, details)) in decrypted_notes.iter().enumerate() {
-        println!("Note {}:\n Header: {:?}\n Details: {:?}", i + 1, header, details);
+    for (i, note) in decrypted_notes.iter().enumerate() {
+        println!(
+            "Note {}:\n Header: {:?}\n Details: {:?}",
+            i + 1,
+            note.header(),
+            NoteDetails::from(note)
+        );
     }
 
     Ok(())

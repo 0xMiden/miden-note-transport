@@ -84,7 +84,7 @@ impl TransportLayerClient {
     }
 
     /// Fetch and decrypt notes for a tag
-    pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<(NoteHeader, NoteDetails)>> {
+    pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<Note>> {
         let infos = self.transport_client.fetch_notes(tag).await?;
         let mut decrypted_notes = Vec::new();
 
@@ -97,7 +97,12 @@ impl TransportLayerClient {
                 let details = NoteDetails::read_from_bytes(&info.details).map_err(|e| {
                     Error::Decryption(format!("Failed to deserialize decrypted details: {e}"))
                 })?;
-                decrypted_notes.push((info.header, details));
+                let note = Note::new(
+                    details.assets().clone(),
+                    *info.header.metadata(),
+                    details.recipient().clone(),
+                );
+                decrypted_notes.push(note);
 
                 // Store the encrypted note
                 self.database.store_note(&info.header, &info.details, info.created_at).await?;

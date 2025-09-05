@@ -28,9 +28,9 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
 
     // Fetch note back
     let fetch_response = client1.fetch_notes(sent_tag).await?;
-    let infos = fetch_response;
-    assert_eq!(infos.len(), 1);
-    let (header, _details) = &infos[0];
+    let notes = fetch_response;
+    assert_eq!(notes.len(), 1);
+    let header = notes[0].header();
 
     let tag = header.metadata().tag();
     assert_eq!(tag, sent_tag);
@@ -70,20 +70,24 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
     assert_eq!(status, NoteStatus::Sent);
 
     // Fetch Tag0 (Note0)
-    let fetch_response = client2.fetch_notes(sent_tag0).await?;
-    let infos = fetch_response;
-    assert_eq!(infos.len(), 1);
-    let (header, _details) = &infos[0];
-    let tag = header.metadata().tag();
-    assert_eq!(tag, sent_tag0);
+    {
+        let fetch_response = client2.fetch_notes(sent_tag0).await?;
+        let fetched_notes = fetch_response;
+        assert_eq!(fetched_notes.len(), 1);
+        let header = fetched_notes[0].header();
+        let tag = header.metadata().tag();
+        assert_eq!(tag, sent_tag0);
+    }
 
     // Fetch Tag1 (Note1)
-    let fetch_response = client2.fetch_notes(sent_tag1).await?;
-    let infos = fetch_response;
-    assert_eq!(infos.len(), 1);
-    let (header, _details) = &infos[0];
-    let tag = header.metadata().tag();
-    assert_eq!(tag, sent_tag1);
+    {
+        let fetch_response = client2.fetch_notes(sent_tag1).await?;
+        let fetched_notes = fetch_response;
+        assert_eq!(fetched_notes.len(), 1);
+        let header = fetched_notes[0].header();
+        let tag = header.metadata().tag();
+        assert_eq!(tag, sent_tag1);
+    }
 
     handle.abort();
     Ok(())
