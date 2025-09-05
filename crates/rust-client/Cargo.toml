@@ -104,7 +104,7 @@ tonic-web-wasm-client = { default-features = false, optional = true, version = "
 
 
 [dev-dependencies]
-miden-private-transport-client = { workspace = true, features = ["sqlite", "tonic"] }
+miden-private-transport-client = { features = ["sqlite", "tonic"], workspace = true }
 miden-private-transport-node   = { workspace = true }
 serial_test                    = { workspace = true }
 tokio                          = { workspace = true }
