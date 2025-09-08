@@ -13,7 +13,6 @@ use alloc::{
 use core::{
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
 };
 
 use chrono::{DateTime, Utc};
@@ -24,11 +23,14 @@ use miden_private_transport_proto::miden_private_transport::{
     miden_private_transport_client::MidenPrivateTransportClient,
 };
 use prost_types;
-#[cfg(feature = "tonic")]
-use tonic::transport::{Channel, ClientTlsConfig};
 use tonic::{Request, Streaming};
 use tonic_health::pb::{HealthCheckRequest, health_client::HealthClient};
-use tower::timeout::Timeout;
+#[cfg(feature = "tonic")]
+use {
+    std::time::Duration,
+    tonic::transport::{Channel, ClientTlsConfig},
+    tower::timeout::Timeout,
+};
 
 use crate::{
     Error, NoteStream, Result,

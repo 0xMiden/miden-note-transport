@@ -10,10 +10,7 @@ use alloc::{
 };
 
 use chrono::{DateTime, Utc};
-use miden_objects::{
-    account::AccountId,
-    note::{NoteHeader, NoteId, NoteTag},
-};
+use miden_objects::note::{NoteHeader, NoteId, NoteTag};
 
 /// Trait for client database operations
 #[cfg_attr(not(feature = "idxdb"), async_trait::async_trait)]
@@ -48,18 +45,6 @@ pub trait DatabaseBackend: Send + Sync {
 
     /// Get all fetched note IDs for a specific tag
     async fn get_fetched_notes_for_tag(&self, tag: NoteTag) -> Result<Vec<NoteId>, DatabaseError>;
-
-    /// Store a tag to account ID mapping
-    async fn store_tag_account_mapping(
-        &self,
-        tag: NoteTag,
-        account_id: &AccountId,
-    ) -> Result<(), DatabaseError>;
-
-    /// Get all tag to account ID mappings
-    async fn get_all_tag_account_mappings(
-        &self,
-    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError>;
 
     /// Get database statistics
     async fn get_stats(&self) -> Result<DatabaseStats, DatabaseError>;
@@ -100,22 +85,6 @@ impl Database {
     pub async fn new_sqlite(config: DatabaseConfig) -> Result<Self, DatabaseError> {
         let backend = sqlite::SqliteDatabase::connect(config).await?;
         Ok(Self::new(Box::new(backend)))
-    }
-
-    /// Store a tag to account ID mapping
-    pub async fn store_tag_account_mapping(
-        &self,
-        tag: NoteTag,
-        account_id: &AccountId,
-    ) -> Result<(), DatabaseError> {
-        self.backend.store_tag_account_mapping(tag, account_id).await
-    }
-
-    /// Get all tag to account ID mappings
-    pub async fn get_all_tag_account_mappings(
-        &self,
-    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError> {
-        self.backend.get_all_tag_account_mappings().await
     }
 
     /// Store an encrypted note

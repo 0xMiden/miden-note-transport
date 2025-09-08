@@ -6,7 +6,6 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use miden_objects::{
-    account::AccountId,
     note::{NoteHeader, NoteId, NoteTag},
     utils::{Deserializable, Serializable},
 };
@@ -58,19 +57,6 @@ impl SqliteDatabase {
                 tag INTEGER NOT NULL,
                 header BLOB NOT NULL,
                 details BLOB NOT NULL,
-                created_at TEXT NOT NULL
-            ) STRICT;
-            ",
-        )
-        .execute(pool)
-        .await?;
-
-        // Table for storing tag to account ID mappings
-        sqlx::query(
-            r"
-            CREATE TABLE IF NOT EXISTS tag_account_mappings (
-                tag INTEGER PRIMARY KEY,
-                account_id BLOB NOT NULL,
                 created_at TEXT NOT NULL
             ) STRICT;
             ",
@@ -275,55 +261,6 @@ impl DatabaseBackend for SqliteDatabase {
         .await?;
 
         Ok(result.rows_affected())
-    }
-
-    async fn store_tag_account_mapping(
-        &self,
-        tag: NoteTag,
-        account_id: &AccountId,
-    ) -> Result<(), DatabaseError> {
-        let now = Utc::now();
-
-        sqlx::query(
-            r"
-            INSERT OR REPLACE INTO tag_account_mappings (tag, account_id, created_at)
-            VALUES (?, ?, ?)
-            ",
-        )
-        .bind(i64::from(tag.as_u32()))
-        .bind(&account_id.to_bytes()[..])
-        .bind(now.to_rfc3339())
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    async fn get_all_tag_account_mappings(
-        &self,
-    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError> {
-        let rows = sqlx::query(
-            r"
-            SELECT tag, account_id FROM tag_account_mappings
-            ORDER BY created_at ASC
-            ",
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let mut mappings = Vec::new();
-        for row in rows {
-            let tag: u32 = row.try_get("tag")?;
-            let account_id_bytes: Vec<u8> = row.try_get("account_id")?;
-
-            let tag = NoteTag::from(tag);
-            let account_id = AccountId::read_from_bytes(&account_id_bytes)
-                .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
-
-            mappings.push((tag, account_id));
-        }
-
-        Ok(mappings)
     }
 }
 
