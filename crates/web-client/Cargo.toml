@@ -26,23 +26,22 @@ default = []
 miden-private-transport-client = { features = ["idxdb", "web-tonic"], workspace = true }
 
 # Miden dependencies
-miden-client  = { default-features = false, version = "0.11.1" }
-miden-lib     = { default-features = false, version = "0.11.1" }
+miden-client  = { workspace = true }
+miden-lib     = { workspace = true }
 miden-objects = { workspace = true }
-miden-testing = { version = "0.11.1" }
+miden-testing = { workspace = true }
 
 # External dependencies
 async-trait          = { workspace = true }
 chrono               = { workspace = true }
+hex                  = { workspace = true }
 rand                 = { workspace = true }
-serde-wasm-bindgen   = { version = "0.6" }
-wasm-bindgen         = { features = ["serde-serialize"], version = "0.2" }
-web-sys              = { features = ["console"], version = "0.3" }
-hex                  = "0.4"
-serde_json           = "1.0"
-wasm-bindgen-futures = { version = "0.4" }
-js-sys                = "0.3"
+serde_json           = { workspace = true }
+wasm-bindgen         = { workspace = true, features = ["serde-serialize"], version = "0.2" }
+wasm-bindgen-futures = { workspace = true, version = "0.4" }
+web-sys              = { workspace = true, features = ["console"], version = "0.3" }
 winter-utils         = "0.8"
 
-[dev-dependencies]
-web-sys = { features = ["console"], version = "0.3" }
+# Web-specific dependencies
+js-sys                = { workspace = true }
+serde-wasm-bindgen   = { workspace = true }

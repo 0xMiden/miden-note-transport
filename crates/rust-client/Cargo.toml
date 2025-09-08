@@ -55,14 +55,14 @@ web-tonic = ["dep:getrandom", "dep:tonic-web-wasm-client"]
 miden-private-transport-proto = { workspace = true }
 
 # Miden
-miden-lib     = { default-features = false, version = "0.11.1" }
+miden-lib     = { workspace = true }
 miden-objects = { workspace = true }
-miden-testing = { default-features = false, version = "0.11.1" }
+miden-testing = { workspace = true }
 
 # gRPC server and client
 tonic        = { workspace = true }
 tonic-health = { workspace = true }
-tower        = { features = ["timeout"], version = "0.5" }
+tower        = { workspace = true, features = ["timeout"], version = "0.5" }
 
 # Serialization
 serde      = { workspace = true }
@@ -98,12 +98,12 @@ rand = { workspace = true }
 
 # WASM
 getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
-serde-wasm-bindgen    = { optional = true, version = "0.6" }
+serde-wasm-bindgen    = { optional = true, workspace = true }
 tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
-wasm-bindgen          = { features = ["serde-serialize"], optional = true, version = "0.2" }
-wasm-bindgen-futures  = { optional = true, version = "0.4" }
-web-sys               = { optional = true, version = "0.3", features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
-js-sys                = { optional = true, version = "0.3" }
+wasm-bindgen          = { workspace = true, features = ["serde-serialize"], optional = true, version = "0.2" }
+wasm-bindgen-futures  = { workspace = true, optional = true, version = "0.4" }
+web-sys               = { workspace = true, optional = true, version = "0.3", features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
+js-sys                = { optional = true, workspace = true }
 base64                = { optional = true, version = "0.22" }
 
 
