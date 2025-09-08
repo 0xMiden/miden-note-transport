@@ -34,8 +34,8 @@ miden-objects = { workspace = true }
 hex                  = { workspace = true }
 rand                 = { workspace = true }
 serde_json           = { workspace = true }
-wasm-bindgen         = { workspace = true, features = ["serde-serialize"] }
+wasm-bindgen         = { features = ["serde-serialize"], workspace = true }
 wasm-bindgen-futures = { workspace = true }
 
 # Web-specific dependencies
-js-sys                = { workspace = true }
+js-sys = { workspace = true }

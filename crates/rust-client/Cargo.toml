@@ -25,11 +25,11 @@ default = ["std", "tonic/channel"]
 idxdb = [
   "dep:base64",
   "dep:getrandom",
+  "dep:js-sys",
   "dep:serde-wasm-bindgen",
   "dep:wasm-bindgen",
   "dep:wasm-bindgen-futures",
   "dep:web-sys",
-  "dep:js-sys",
 ]
 sqlite = ["dep:sqlx", "std"]
 std = [
@@ -62,10 +62,10 @@ miden-testing = { workspace = true }
 # gRPC server and client
 tonic        = { workspace = true }
 tonic-health = { workspace = true }
-tower        = { workspace = true, features = ["timeout"] }
+tower        = { features = ["timeout"], workspace = true }
 
 # Serialization
-base64     = { workspace = true, optional = true }
+base64     = { optional = true, workspace = true }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 
@@ -99,12 +99,23 @@ rand = { workspace = true }
 
 # WASM
 getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
-serde-wasm-bindgen    = { optional = true, version = "0.6" }
+js-sys = { optional = true, workspace = true }
+serde-wasm-bindgen = { optional = true, version = "0.6" }
 tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
-wasm-bindgen          = { workspace = true, features = ["serde-serialize"], optional = true }
-wasm-bindgen-futures  = { workspace = true, optional = true }
-web-sys               = { workspace = true, optional = true, features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
-js-sys                = { optional = true, workspace = true }
+wasm-bindgen = { features = ["serde-serialize"], optional = true, workspace = true }
+wasm-bindgen-futures = { optional = true, workspace = true }
+web-sys = { features = [
+  "IdbDatabase",
+  "IdbFactory",
+  "IdbObjectStore",
+  "IdbOpenDbRequest",
+  "IdbRequest",
+  "IdbRequestReadyState",
+  "IdbTransaction",
+  "IdbTransactionMode",
+  "IdbVersionChangeEvent",
+  "Window",
+], optional = true, workspace = true }
 
 
 [dev-dependencies]

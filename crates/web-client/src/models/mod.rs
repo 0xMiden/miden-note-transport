@@ -7,9 +7,9 @@
 //! ## Purpose
 //!
 //! This module is designed to enable developers to work with core transport layer objects directly
-//! from JavaScript in a browser environment. By exposing Rust-native functionality via `wasm_bindgen`,
-//! it ensures that the web-based use of the transport client maintains the same functionality as
-//! the Rust-native experience.
+//! from JavaScript in a browser environment. By exposing Rust-native functionality via
+//! `wasm_bindgen`, it ensures that the web-based use of the transport client maintains the same
+//! functionality as the Rust-native experience.
 //!
 //! ## Usage
 //!
