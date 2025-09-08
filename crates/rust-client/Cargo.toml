@@ -12,7 +12,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [package.metadata.cargo-machete]
-ignored = ["getrandom"]
+ignored = ["base64", "getrandom", "web-sys"]
 
 [lints]
 workspace = true
@@ -62,9 +62,10 @@ miden-testing = { workspace = true }
 # gRPC server and client
 tonic        = { workspace = true }
 tonic-health = { workspace = true }
-tower        = { workspace = true, features = ["timeout"], version = "0.5" }
+tower        = { workspace = true, features = ["timeout"] }
 
 # Serialization
+base64     = { workspace = true, optional = true }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 
@@ -98,13 +99,12 @@ rand = { workspace = true }
 
 # WASM
 getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
-serde-wasm-bindgen    = { optional = true, workspace = true }
+serde-wasm-bindgen    = { optional = true, version = "0.6" }
 tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
-wasm-bindgen          = { workspace = true, features = ["serde-serialize"], optional = true, version = "0.2" }
-wasm-bindgen-futures  = { workspace = true, optional = true, version = "0.4" }
-web-sys               = { workspace = true, optional = true, version = "0.3", features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
+wasm-bindgen          = { workspace = true, features = ["serde-serialize"], optional = true }
+wasm-bindgen-futures  = { workspace = true, optional = true }
+web-sys               = { workspace = true, optional = true, features = ["IdbDatabase", "IdbRequest", "IdbTransaction", "IdbTransactionMode", "Window", "IdbFactory", "IdbOpenDbRequest", "IdbRequestReadyState", "IdbVersionChangeEvent", "IdbObjectStore"] }
 js-sys                = { optional = true, workspace = true }
-base64                = { optional = true, version = "0.22" }
 
 
 [dev-dependencies]

@@ -14,7 +14,7 @@ version.workspace      = true
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["wasm-bindgen-futures"]
+ignored = ["js-sys"]
 
 [lib]
 crate-type = ["cdylib"]
@@ -29,19 +29,13 @@ miden-private-transport-client = { features = ["idxdb", "web-tonic"], workspace 
 miden-client  = { workspace = true }
 miden-lib     = { workspace = true }
 miden-objects = { workspace = true }
-miden-testing = { workspace = true }
 
 # External dependencies
-async-trait          = { workspace = true }
-chrono               = { workspace = true }
 hex                  = { workspace = true }
 rand                 = { workspace = true }
 serde_json           = { workspace = true }
-wasm-bindgen         = { workspace = true, features = ["serde-serialize"], version = "0.2" }
-wasm-bindgen-futures = { workspace = true, version = "0.4" }
-web-sys              = { workspace = true, features = ["console"], version = "0.3" }
-winter-utils         = "0.8"
+wasm-bindgen         = { workspace = true, features = ["serde-serialize"] }
+wasm-bindgen-futures = { workspace = true }
 
 # Web-specific dependencies
 js-sys                = { workspace = true }
-serde-wasm-bindgen   = { workspace = true }
