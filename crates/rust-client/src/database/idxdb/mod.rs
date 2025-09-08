@@ -1,10 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 
 use chrono::{DateTime, Utc};
-use miden_objects::{
-    account::AccountId,
-    note::{NoteHeader, NoteId, NoteTag},
-};
+use miden_objects::note::{NoteHeader, NoteId, NoteTag};
 
 use crate::database::{DatabaseBackend, DatabaseError, DatabaseStats, StoredNote};
 
@@ -61,22 +58,6 @@ impl DatabaseBackend for IndexedDb {
 
     /// Get all fetched note IDs for a specific tag
     async fn get_fetched_notes_for_tag(&self, _tag: NoteTag) -> Result<Vec<NoteId>, DatabaseError> {
-        Ok(vec![])
-    }
-
-    /// Store a tag to account ID mapping
-    async fn store_tag_account_mapping(
-        &self,
-        _tag: NoteTag,
-        _account_id: &AccountId,
-    ) -> Result<(), DatabaseError> {
-        Ok(())
-    }
-
-    /// Get all tag to account ID mappings
-    async fn get_all_tag_account_mappings(
-        &self,
-    ) -> Result<Vec<(NoteTag, AccountId)>, DatabaseError> {
         Ok(vec![])
     }
 
