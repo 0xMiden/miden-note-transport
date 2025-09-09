@@ -6,7 +6,6 @@ compile_error!("The `web-tonic` feature is only supported when targeting wasm32.
 
 use alloc::{
     boxed::Box,
-    collections::BTreeMap,
     string::{String, ToString},
     vec::Vec,
 };
@@ -46,8 +45,6 @@ type Service = tonic_web_wasm_client::Client;
 pub struct GrpcClient {
     client: MidenPrivateTransportClient<Service>,
     health_client: HealthClient<Service>,
-    // Last fetched timestamp
-    lts: BTreeMap<NoteTag, DateTime<Utc>>,
 }
 
 impl GrpcClient {
@@ -63,9 +60,8 @@ impl GrpcClient {
         let timeout_channel = Timeout::new(channel, timeout);
         let health_client = HealthClient::new(timeout_channel.clone());
         let client = MidenPrivateTransportClient::new(timeout_channel);
-        let lts = BTreeMap::new();
 
-        Ok(Self { client, health_client, lts })
+        Ok(Self { client, health_client })
     }
 
     #[cfg(feature = "web-tonic")]
@@ -73,9 +69,8 @@ impl GrpcClient {
         let client = tonic_web_wasm_client::Client::new(endpoint);
         let health_client = HealthClient::new(client.clone());
         let client = MidenPrivateTransportClient::new(client.clone());
-        let lts = BTreeMap::new();
 
-        Ok(Self { client, health_client, lts })
+        Ok(Self { client, health_client })
     }
 
     pub async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
@@ -99,13 +94,12 @@ impl GrpcClient {
         Ok(note_id)
     }
 
-    pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>> {
-        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
+    pub async fn fetch_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<NoteInfo>> {
         let request = FetchNotesRequest {
             tag: tag.as_u32(),
             timestamp: Some(prost_types::Timestamp {
-                seconds: ts.timestamp(),
-                nanos: ts
+                seconds: timestamp.timestamp(),
+                nanos: timestamp
                     .timestamp_subsec_nanos()
                     .try_into()
                     .map_err(|_| Error::Internal("Timestamp nanoseconds too large".to_string()))?,
@@ -123,7 +117,6 @@ impl GrpcClient {
 
         // Convert protobuf notes to internal format and track the most recent received timestamp
         let mut notes = Vec::new();
-        let mut latest_received_at = ts;
 
         for pts_note in response.notes {
             let note = pts_note
@@ -139,11 +132,6 @@ impl GrpcClient {
                 Utc::now() // Fallback to current time if timestamp is missing
             };
 
-            // Update the latest received timestamp
-            if received_at > latest_received_at {
-                latest_received_at = received_at;
-            }
-
             notes.push(NoteInfo {
                 header,
                 details: note.details,
@@ -151,20 +139,15 @@ impl GrpcClient {
             });
         }
 
-        // Update the last timestamp to the most recent received timestamp
-        self.lts.insert(tag, latest_received_at);
-
         Ok(notes)
     }
 
-    pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<NoteStreamAdapter> {
-        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
-
+    pub async fn stream_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<NoteStreamAdapter> {
         let request = StreamNotesRequest {
             tag: tag.as_u32(),
             timestamp: Some(prost_types::Timestamp {
-                seconds: ts.timestamp(),
-                nanos: ts
+                seconds: timestamp.timestamp(),
+                nanos: timestamp
                     .timestamp_subsec_nanos()
                     .try_into()
                     .map_err(|_| Error::Internal("Timestamp nanoseconds too large".to_string()))?,
@@ -206,12 +189,12 @@ impl super::TransportClient for GrpcClient {
         Ok(note_id)
     }
 
-    async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<crate::types::NoteInfo>> {
-        self.fetch_notes(tag).await
+    async fn fetch_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<crate::types::NoteInfo>> {
+        self.fetch_notes(tag, timestamp).await
     }
 
-    async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
-        let stream = self.stream_notes(tag).await?;
+    async fn stream_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Box<dyn NoteStream>> {
+        let stream = self.stream_notes(tag, timestamp).await?;
         Ok(Box::new(stream))
     }
 }

@@ -2,7 +2,7 @@
 
 #[macro_use]
 extern crate alloc;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -14,6 +14,7 @@ pub mod grpc;
 pub mod logging;
 pub mod types;
 
+use chrono::{DateTime, Utc};
 use futures::Stream;
 use miden_objects::{
     address::Address,
@@ -36,11 +37,11 @@ pub trait TransportClient: Send + Sync {
     /// Send a note with optionally encrypted details
     async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId>;
 
-    /// Fetch all notes for a given tag
-    async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<NoteInfo>>;
+    /// Fetch all notes timestamped after a given timestamp for a given tag
+    async fn fetch_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<NoteInfo>>;
 
     /// Stream notes for a given tag
-    async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>>;
+    async fn stream_notes(&mut self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Box<dyn NoteStream>>;
 }
 
 /// Stream trait for note streaming
@@ -53,6 +54,8 @@ pub struct TransportLayerClient {
     database: Database,
     /// Owned addresses
     addresses: Vec<Address>,
+    /// Last fetched timestamp
+    lts: BTreeMap<NoteTag, DateTime<Utc>>,
 }
 
 impl TransportLayerClient {
@@ -61,7 +64,8 @@ impl TransportLayerClient {
         database: Database,
         addresses: Vec<Address>,
     ) -> Self {
-        Self { transport_client, database, addresses }
+        let lts = BTreeMap::new();
+        Self { transport_client, database, addresses, lts }
     }
 
     /// Send a note to a recipient
@@ -77,9 +81,11 @@ impl TransportLayerClient {
 
     /// Fetch and decrypt notes for a tag
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<Note>> {
-        let infos = self.transport_client.fetch_notes(tag).await?;
+        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
+        let infos = self.transport_client.fetch_notes(tag, ts).await?;
         let mut decrypted_notes = Vec::new();
 
+        let mut latest_ts = ts;
         for info in infos {
             // Check if we've already fetched this note
             if !self.database.note_fetched(&info.header.id()).await? {
@@ -99,14 +105,23 @@ impl TransportLayerClient {
                 // Store the encrypted note
                 self.database.store_note(&info.header, &info.details, info.created_at).await?;
             }
+
+            // Update the latest received timestamp
+            if info.created_at > latest_ts {
+                latest_ts = info.created_at;
+            }
         }
+
+        // Update the last timestamp to the most recent received timestamp
+        self.lts.insert(tag, latest_ts);
 
         Ok(decrypted_notes)
     }
 
     /// Continuously fetch notes
     pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
-        self.transport_client.stream_notes(tag).await
+        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
+        self.transport_client.stream_notes(tag, ts).await
     }
 
     /// Adds an owned address
