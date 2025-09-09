@@ -118,8 +118,7 @@ pub fn random_note_id() -> NoteId {
     NoteId::new(recipient, asset_commitment)
 }
 
-pub const TEST_TAG: u32 = 3_221_225_472;
-pub fn test_note_header() -> NoteHeader {
+pub fn test_note_header(tag: NoteTag) -> NoteHeader {
     use miden_objects::{
         Felt,
         account::AccountId,
@@ -130,7 +129,6 @@ pub fn test_note_header() -> NoteHeader {
     let id = random_note_id();
     let sender = AccountId::try_from(ACCOUNT_ID_MAX_ZEROES).unwrap();
     let note_type = NoteType::Private;
-    let tag = NoteTag::from_account_id(sender);
     let aux = Felt::try_from(0xffff_ffff_0000_0000u64).unwrap();
     let execution_hint = NoteExecutionHint::None;
 
