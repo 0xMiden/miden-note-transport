@@ -1,0 +1,37 @@
+[package]
+name = "miden-load-test"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "load-test"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace/local
+miden-private-transport-client = { features = ["sqlite", "tonic"], workspace = true }
+miden-private-transport-proto  = { workspace = true }
+
+# Miden
+miden-objects                  = { workspace = true }
+
+# External
+anyhow  = { workspace = true }
+clap    = { workspace = true }
+futures = { workspace = true }
+hex     = { workspace = true }
+rand    = { workspace = true }
+tokio   = { workspace = true }
+tracing = { workspace = true }
+tonic = "0.13"
+prost = "0.13"
+prost-types = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+tracing-subscriber = "0.3"
+env_logger = "0.10"
+log = "0.4"
+
+# For generating test data
+miden-crypto = "0.7"

@@ -58,8 +58,7 @@ pub struct AccountWitness {
     pub account_id: ::core::option::Option<AccountId>,
     /// The account ID within the proof, which may be different from the above account ID.
     /// This can happen when the requested account ID's prefix matches the prefix of an existing
-    /// account ID in the tree. Then the witness will prove inclusion of this witness ID in the
-    /// tree.
+    /// account ID in the tree. Then the witness will prove inclusion of this witness ID in the tree.
     #[prost(message, optional, tag = "2")]
     pub witness_id: ::core::option::Option<AccountId>,
     /// The state commitment whose inclusion the witness proves.

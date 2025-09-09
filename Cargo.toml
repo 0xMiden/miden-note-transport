@@ -1,5 +1,5 @@
 [workspace]
-members  = ["bin/cli", "bin/node", "crates/node", "crates/proto", "crates/rust-client", "crates/web-client"]
+members  = ["bin/cli", "bin/node", "bin/load-testing", "crates/node", "crates/proto", "crates/rust-client", "crates/web-client"]
 resolver = "2"
 
 [workspace.package]
