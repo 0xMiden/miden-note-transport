@@ -201,13 +201,9 @@ impl GrpcClient {
 #[cfg_attr(not(feature = "web-tonic"), async_trait::async_trait)]
 #[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 impl super::TransportClient for GrpcClient {
-    async fn send_note(
-        &mut self,
-        header: NoteHeader,
-        details: Vec<u8>,
-    ) -> Result<(NoteId, crate::types::NoteStatus)> {
+    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
         let note_id = self.send_note(header, details).await?;
-        Ok((note_id, crate::types::NoteStatus::Sent))
+        Ok(note_id)
     }
 
     async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<crate::types::NoteInfo>> {

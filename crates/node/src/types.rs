@@ -8,12 +8,6 @@ pub use miden_objects::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum NoteStatus {
-    Sent,
-    Duplicate,
-}
-
 /// A note stored in the database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredNote {

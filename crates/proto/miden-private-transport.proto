@@ -6,12 +6,6 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "types/note.proto";
 
-// Note status enum
-enum NoteStatus {
-    SENT = 0;
-    DUPLICATE = 1;
-}
-
 // A Note exchanged over the Transport Layer.
 // Includes the full header for NoteId, NoteTag access.
 message TransportNote {
@@ -36,7 +30,6 @@ message SendNoteRequest {
 // API response for sending a note
 message SendNoteResponse {
     string id = 1;  // NoteId as hex string
-    NoteStatus status = 2;
 }
 
 // API request for fetching notes

@@ -1,0 +1,59 @@
+name: Web Client Test
+
+on:
+  push:
+    branches: [main, next]
+    paths:
+      - 'crates/web-client/**'
+      - '.github/workflows/web-client-test.yml'
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'crates/web-client/**'
+      - '.github/workflows/web-client-test.yml'
+
+# Limits workflow concurrency to only the latest commit in the PR.
+concurrency:
+  group: "${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  web-client-test:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install Rust (needed for WASM build)
+        run: |
+          rustup update --no-self-update
+          rustup target add wasm32-unknown-unknown
+
+      - name: Add Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start transport node server
+        run: |
+          cargo run --release --bin miden-private-transport-node-bin -- --port 8080 --host 127.0.0.1 &
+          echo "Waiting for server to start..."
+          sleep 10
+          echo "Server should be running on port 8080"
+
+      - name: Install dependencies
+        run: |
+          cd ./crates/web-client
+          yarn install
+
+      - name: Run tests
+        run: |
+          cd ./crates/web-client
+          yarn test

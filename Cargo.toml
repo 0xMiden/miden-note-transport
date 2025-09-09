@@ -1,12 +1,5 @@
 [workspace]
-members = [
-  "bin/cli",
-  "bin/node",
-  "crates/rust-client",
-  #"crates/web-client",
-  "crates/node",
-  "crates/proto",
-]
+members  = ["bin/cli", "bin/node", "crates/node", "crates/proto", "crates/rust-client", "crates/web-client"]
 resolver = "2"
 
 [workspace.package]
@@ -30,6 +23,9 @@ miden-private-transport-proto  = { default-features = false, path = "crates/prot
 miden-objects = { default-features = false, version = "0.11.1" }
 
 # Other miden dependencies. These should align with those expected by miden-base.
+miden-client  = { default-features = false, version = "0.11.1" }
+miden-lib     = { default-features = false, version = "0.11.1" }
+miden-testing = { default-features = false, version = "0.11.1" }
 
 # External dependencies
 anyhow = { default-features = false, version = "1.0" }
@@ -57,9 +53,19 @@ thiserror = { default-features = false, version = "2.0" }
 tokio = { features = ["macros", "net", "rt-multi-thread"], version = "1.47" }
 tonic = { default-features = false, version = "0.13" }
 tonic-health = { version = "0.13" }
+tonic-web = { version = "0.13" }
+tower = { version = "0.5" }
+tower-http = { features = ["cors"], version = "0.6" }
 tracing = { version = "0.1" }
 tracing-opentelemetry = { version = "0.31" }
 tracing-subscriber = { features = ["env-filter", "fmt", "json"], version = "0.3" }
+wasm-bindgen = { features = ["serde-serialize"], version = "0.2" }
+wasm-bindgen-futures = { version = "0.4" }
+web-sys = { features = ["console"], version = "0.3" }
+
+# Web-specific dependencies
+js-sys             = { version = "0.3" }
+serde-wasm-bindgen = { version = "0.6" }
 
 # Lints are set to warn for development, which are promoted to errors in CI.
 [workspace.lints.clippy]

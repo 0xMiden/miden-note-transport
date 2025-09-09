@@ -12,7 +12,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [package.metadata.cargo-machete]
-ignored = ["getrandom"]
+ignored = ["base64", "getrandom", "web-sys"]
 
 [lints]
 workspace = true
@@ -23,12 +23,13 @@ path = "src/lib.rs"
 [features]
 default = ["std", "tonic/channel"]
 idxdb = [
-  #  "dep:base64",
+  "dep:base64",
   "dep:getrandom",
-  #  "dep:serde",
-  #"dep:serde-wasm-bindgen",
-  #"dep:wasm-bindgen",
-  #"dep:wasm-bindgen-futures",
+  "dep:js-sys",
+  "dep:serde-wasm-bindgen",
+  "dep:wasm-bindgen",
+  "dep:wasm-bindgen-futures",
+  "dep:web-sys",
 ]
 sqlite = ["dep:sqlx", "std"]
 std = [
@@ -54,16 +55,17 @@ web-tonic = ["dep:getrandom", "dep:tonic-web-wasm-client"]
 miden-private-transport-proto = { workspace = true }
 
 # Miden
-miden-lib     = { default-features = false, version = "0.11.1" }
+miden-lib     = { workspace = true }
 miden-objects = { workspace = true }
-miden-testing = { default-features = false, version = "0.11.1" }
+miden-testing = { workspace = true }
 
 # gRPC server and client
 tonic        = { workspace = true }
 tonic-health = { workspace = true }
-tower        = { features = ["timeout"], version = "0.5" }
+tower        = { features = ["timeout"], workspace = true }
 
 # Serialization
+base64     = { optional = true, workspace = true }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 
@@ -97,10 +99,23 @@ rand = { workspace = true }
 
 # WASM
 getrandom = { features = ["wasm_js"], optional = true, version = "0.3" }
-#serde-wasm-bindgen    = { optional = true, version = "0.6" }
+js-sys = { optional = true, workspace = true }
+serde-wasm-bindgen = { optional = true, version = "0.6" }
 tonic-web-wasm-client = { default-features = false, optional = true, version = "0.7" }
-#wasm-bindgen          = { features = ["serde-serialize"], optional = true, version = "0.2" }
-#wasm-bindgen-futures  = { optional = true, version = "0.4" }
+wasm-bindgen = { features = ["serde-serialize"], optional = true, workspace = true }
+wasm-bindgen-futures = { optional = true, workspace = true }
+web-sys = { features = [
+  "IdbDatabase",
+  "IdbFactory",
+  "IdbObjectStore",
+  "IdbOpenDbRequest",
+  "IdbRequest",
+  "IdbRequestReadyState",
+  "IdbTransaction",
+  "IdbTransactionMode",
+  "IdbVersionChangeEvent",
+  "Window",
+], optional = true, workspace = true }
 
 
 [dev-dependencies]

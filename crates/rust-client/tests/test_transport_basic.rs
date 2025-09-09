@@ -1,7 +1,7 @@
 mod common;
 
 use miden_private_transport_client::types::{
-    NoteStatus, mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
+    mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
 };
 
 use self::common::*;
@@ -22,9 +22,8 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
     let header = *note.header();
 
     let send_response = client0.send_note(note, &adr1).await?;
-    let (id, status) = send_response;
+    let id = send_response;
     assert_eq!(id, header.id());
-    assert_eq!(status, NoteStatus::Sent);
 
     // Fetch note back
     let fetch_response = client1.fetch_notes(sent_tag).await?;
@@ -59,15 +58,13 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
 
     // Send Note0
     let send_response = client0.send_note(note0, &adr2).await?;
-    let (id, status) = send_response;
+    let id = send_response;
     assert_eq!(id, header0.id());
-    assert_eq!(status, NoteStatus::Sent);
 
     // Send Note1
     let send_response = client1.send_note(note1, &adr2).await?;
-    let (id, status) = send_response;
+    let id = send_response;
     assert_eq!(id, header1.id());
-    assert_eq!(status, NoteStatus::Sent);
 
     // Fetch Tag0 (Note0)
     {

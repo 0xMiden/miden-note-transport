@@ -12,6 +12,9 @@ use miden_private_transport_proto::miden_private_transport::{
 use rand::Rng;
 use tokio::sync::mpsc;
 use tonic::Status;
+use tonic_web::GrpcWebLayer;
+use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
 
 use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
 use crate::{database::Database, metrics::MetricsGrpc};
@@ -66,9 +69,22 @@ impl GrpcServer {
             .parse::<SocketAddr>()
             .map_err(|e| crate::Error::Internal(format!("Invalid address: {e}")))?;
 
+        // Build the server with gRPC-Web support and CORS
+        let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
+
         tonic::transport::Server::builder()
-            .add_service(health_svc)
-            .add_service(self.into_service())
+            .accept_http1(true) // Enable HTTP/1.1 for gRPC-Web
+            .layer(cors) // Add CORS layer at server level
+            .add_service(
+                ServiceBuilder::new()
+                    .layer(GrpcWebLayer::new()) // Add gRPC-Web layer
+                    .service(health_svc)
+            )
+            .add_service(
+                ServiceBuilder::new()
+                    .layer(GrpcWebLayer::new()) // Add gRPC-Web layer
+                    .service(self.into_service())
+            )
             .serve(addr)
             .await
             .map_err(|e| crate::Error::Internal(format!("Server error: {e}")))
@@ -124,7 +140,6 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
 
         Ok(tonic::Response::new(SendNoteResponse {
             id: note_for_db.header.id().to_hex(),
-            status: miden_private_transport_proto::miden_private_transport::NoteStatus::Sent as i32,
         }))
     }
 
