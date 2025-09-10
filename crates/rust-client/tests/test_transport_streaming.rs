@@ -1,7 +1,7 @@
 mod common;
 
 use futures::StreamExt;
-use miden_private_transport_client::types::{mock_address, mock_note_p2id_with_addresses};
+use miden_private_transport_client::test_utils::{mock_address, mock_note_p2id_with_addresses};
 use tokio::time::{Duration, sleep};
 
 use self::common::*;

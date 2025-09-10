@@ -1,4 +1,72 @@
+//! # Miden Transport Layer Client Library
+//!
+//! This crate provides a lightweight client to communicate optionally-encrypted private notes with
+//! the Miden Transport Layer.
+//!
+//! `no-std` is supported, with support also for WASM environments.
+//!
+//! ## Overview
+//!
+//! Notes are exchanged with the Transport Layer Node (and other users) where the
+//! [`NoteTag`](`miden_objects::note::NoteTag`) serves as principal identifier for note routing.
+//!
+//! - **Sending a note**: to send a note call the [`TransportLayerClient::send_note`] function with
+//!   the recipient's address. In the future, the note will be encrypted internally, to enable
+//!   end-to-end encryption;
+//! - **Fetching notes**: retrieve notes by their [`NoteTag`] using
+//!   [`TransportLayerClient::fetch_notes`]. Previously fetched notes will not be returned, a
+//!   feature enabled by a internal pagination mechanism;
+//! - **Streaming notes**: similarly to fetching notes, but based on a real-time subscription
+//!   mechanism.
+//!
+//! A local database keeps track of fetched notes and other client state.
+//!
+//! Communications with the Transport Layer Node are made through gRPC using `tonic`.
+//! A database implementation is provided (SQLite for a `std` compilation, and `IndexedDB` for
+//! WASM). Both the client-node gRPC communications and database implementations can be changed by
+//! employing other strucs implementing the [`TransportClient`] and
+//! [`DatabaseBackend`](`database::DatabaseBackend`) traits,
+//! respectively.
+//!
+//! ## Example
+//!
+//! Below is a brief example on how to send and fetch notes:
+//!
+//! ```rust, no_run
+//! use miden_objects::{address::Address, note::{Note, NoteTag}};
+//! use miden_private_transport_client::{
+//!     Error, Result, TransportLayerClient,
+//!     database::{Database, DatabaseConfig},
+//!     grpc::GrpcClient,
+//!     test_utils::{mock_address, mock_note_p2id_with_addresses},
+//! };
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     // Initialize the client
+//!     let db_config = DatabaseConfig::default();
+//!     let db = Database::new_sqlite(db_config).await?;
+//!     let grpc = GrpcClient::connect("http://localhost:8080".to_string(), 1000).await?;
+//!     let mut client = TransportLayerClient::new(Box::new(grpc), db, vec![]);
+//!
+//!     // Random data for this example
+//!     let sender: Address = mock_address();
+//!     let recipient: Address = mock_address();
+//!     let note: Note = mock_note_p2id_with_addresses(&sender, &recipient);
+//!
+//!     // Send a note (needs a running server)
+//!     client.send_note(note, &recipient).await?;
+//!
+//!     // Fetch notes (needs a running server)
+//!     let tag = recipient.to_note_tag();
+//!     let notes = client.fetch_notes(tag).await?;
+//!
+//!     Ok(())
+//! }
+//! ```
+
 #![no_std]
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate alloc;
@@ -7,11 +75,21 @@ use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 #[cfg(feature = "std")]
 extern crate std;
 
+/// Database
 pub mod database;
+/// Error management
 pub mod error;
+/// gRPC client
 pub mod grpc;
+/// Tracing configuration
 #[cfg(feature = "std")]
 pub mod logging;
+/// Testing utilities
+///
+/// Gated through the `testing` feature.
+#[cfg(feature = "testing")]
+pub mod test_utils;
+/// Types used
 pub mod types;
 
 use chrono::{DateTime, Utc};
@@ -67,6 +145,7 @@ pub struct TransportLayerClient {
 }
 
 impl TransportLayerClient {
+    /// Main client constructor
     pub fn new(
         transport_client: Box<dyn TransportClient>,
         database: Database,
@@ -105,9 +184,8 @@ impl TransportLayerClient {
                 // Mark note as fetched
                 self.database.record_fetched_note(&info.header.id(), tag).await?;
 
-                let details = NoteDetails::read_from_bytes(&info.details).map_err(|e| {
-                    Error::Decryption(format!("Failed to deserialize decrypted details: {e}"))
-                })?;
+                let details = NoteDetails::read_from_bytes(&info.details)
+                    .map_err(|e| Error::Internal(format!("Failed to deserialize details: {e}")))?;
                 let note = Note::new(
                     details.assets().clone(),
                     *info.header.metadata(),

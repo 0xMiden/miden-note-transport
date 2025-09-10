@@ -20,6 +20,7 @@ pub struct DatabaseMaintenance {
 }
 
 impl DatabaseMaintenance {
+    /// Main constructor
     pub fn new(database: Arc<Database>, config: DatabaseConfig, metrics: MetricsDatabase) -> Self {
         Self {
             database,
@@ -29,6 +30,7 @@ impl DatabaseMaintenance {
         }
     }
 
+    /// Database maintenance running-task
     pub async fn entrypoint(mut self) {
         self.state = State::Running;
         while self.is_active() {
@@ -62,10 +64,7 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::{
-        metrics::Metrics,
-        types::{StoredNote, test_note_header},
-    };
+    use crate::{metrics::Metrics, test_utils::test_note_header, types::StoredNote};
 
     fn note_at(age: Duration) -> StoredNote {
         StoredNote {

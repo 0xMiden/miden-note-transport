@@ -14,7 +14,9 @@ use tracing_subscriber::{
 /// Configures [`setup_tracing`] to enable or disable the open-telemetry exporter.
 #[derive(Clone, Copy)]
 pub enum OpenTelemetry {
+    /// Enables OpenTelemetry export
     Enabled,
+    /// Disables OpenTelemetry export
     Disabled,
 }
 

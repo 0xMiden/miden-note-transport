@@ -3,36 +3,49 @@
 <!--`TODO(template) update badges`-->
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/0xMiden/project-template/blob/main/LICENSE)
 [![test](https://github.com/0xMiden/project-template/actions/workflows/test.yml/badge.svg)](https://github.com/0xMiden/project-template/actions/workflows/test.yml)
-[![RUST_VERSION](https://img.shields.io/badge/rustc-1.85+-lightgray.svg)](https://www.rust-lang.org/tools/install)
-[![crates.io](https://img.shields.io/crates/v/miden-mybinary)](https://crates.io/crates/miden-mybinary)
+[![RUST_VERSION](https://img.shields.io/badge/rustc-1.89+-lightgray.svg)](https://www.rust-lang.org/tools/install)
 
 ## Overview
 
+The Miden Transport Layer for Private Notes is a communications system focusing on performance and privacy for the secure exchange of private notes.
+
+The system is based mostly on a request-reply client-server communication scheme, supporting end-to-end encryption.
+The (optionally encrypted) notes are stored on-server allowing for async note exchange between users.
+
+### Crates
+
+This repository contains the following crates:
+
+- `node`: Node/server library;
+- `rust-client`: Rust client library;
+- `web-client`: Client implementation targeting a web-environment. Typescript bindings to the Rust client are provided. WASM-compatible.
+- `proto`: Protobuf definitions and generated code;
+
+### Binaries
+
+This repository contains the following binaries, built upon the above crates:
+
+- `node`: Node/server implementation, wrapping the respective library;
+- `cli`: Client command-line-interface, wrapping the respective (Rust) library. Easy-to-use application able to send and fetch notes from the Transport Layer;
+- `load-test`: Load testing tool for the node implementation.
+
+## API Reference
+
+Three main functions are used to interact with the Transport Layer:
+
+- `send_note(note, address)` allows a client to push a note, directed to a recipient (identified by its address), to the Transport Layer. The note is kept in the Transport Layer for a certain retention period (30 days);
+- `fetch_notes(tag)` allows a client to fetch notes associated with a certain tag;
+- `stream_notes(tag)` similarly to `fetch_notes()`, but the client subscribes to a tag and receives new notes periodically.
+
 ### Telemetry
 
-Metrics and Traces are provided for the Node implementation.
+Metrics and Traces are provided for the node implementation.
 Data is exported using OpenTelemetry.
 A Docker-based setup is provided, with the following stack:
 - OpenTelemetry Collector;
 - Tempo (Traces);
 - Prometheus (Metrics);
 - Grafana (Visualization).
-
-### Crates
-
-- `client`: Client implementation.
-- `node`: Node/server implementation.
-- `proto`: Protobuf definitions and generated code;
-
-## Quick Start
-
-## API Reference
-
-## Usage
-
-### Sending a Note
-
-### Receiving Notes
 
 ## Contributing
 

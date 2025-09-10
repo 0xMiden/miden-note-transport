@@ -1801,6 +1801,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "miden-objects",
+ "miden-private-transport-node",
  "miden-private-transport-proto",
  "opentelemetry",
  "opentelemetry-otlp",

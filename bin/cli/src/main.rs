@@ -14,7 +14,7 @@ use miden_private_transport_client::{
     database::{Database, DatabaseConfig},
     grpc::GrpcClient,
     logging::{OpenTelemetry, setup_tracing},
-    types::{mock_address, mock_note_p2id_with_addresses},
+    test_utils::{mock_address, mock_note_p2id_with_addresses},
 };
 use tracing::info;
 

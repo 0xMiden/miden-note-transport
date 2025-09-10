@@ -17,6 +17,9 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
+[features]
+testing = []
+
 [dependencies]
 # Proto crate
 miden-private-transport-proto = { workspace = true }
@@ -64,4 +67,5 @@ chrono = { workspace = true }
 rand = { workspace = true }
 
 [dev-dependencies]
-serial_test = { workspace = true }
+miden-private-transport-node = { features = ["testing"], workspace = true }
+serial_test                  = { workspace = true }

@@ -40,12 +40,18 @@ pub struct Database {
     backend: Box<dyn DatabaseBackend>,
 }
 
+/// [`Database`] configuration
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
+    /// Database URL
     pub url: String,
+    /// Maximum size of a stored note
     pub max_note_size: usize,
+    /// Retention period in days
     pub retention_days: u32,
+    /// Rate limit per minute
     pub rate_limit_per_minute: u32,
+    /// Request timeout in seconds
     pub request_timeout_seconds: u64,
 }
 
@@ -103,10 +109,9 @@ mod tests {
     use chrono::Utc;
 
     use super::*;
-    use crate::{
-        metrics::Metrics,
-        types::{TEST_TAG, test_note_header},
-    };
+    use crate::{metrics::Metrics, test_utils::test_note_header};
+
+    const TAG_LOCAL_ANY: u32 = 0xc000_0000;
 
     #[tokio::test]
     async fn test_sqlite_database() {
@@ -123,7 +128,7 @@ mod tests {
 
         db.store_note(&note).await.unwrap();
 
-        let fetched_notes = db.fetch_notes(TEST_TAG.into(), start).await.unwrap();
+        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), start).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
@@ -154,13 +159,13 @@ mod tests {
 
         // Fetch notes with timestamp before the note was received - should return the note
         let before_timestamp = received_time - chrono::Duration::seconds(1);
-        let fetched_notes = db.fetch_notes(TEST_TAG.into(), before_timestamp).await.unwrap();
+        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), before_timestamp).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
         // Fetch notes with timestamp after the note was received - should return empty
         let after_timestamp = received_time + chrono::Duration::seconds(1);
-        let fetched_notes = db.fetch_notes(TEST_TAG.into(), after_timestamp).await.unwrap();
+        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), after_timestamp).await.unwrap();
         assert_eq!(fetched_notes.len(), 0);
     }
 }

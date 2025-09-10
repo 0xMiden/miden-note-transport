@@ -30,8 +30,11 @@ pub struct GrpcServer {
 /// [`GrpcServer`] configuration
 #[derive(Clone, Debug)]
 pub struct GrpcServerConfig {
+    /// Server host
     pub host: String,
+    /// Server port
     pub port: u16,
+    /// Maximum note size to be stored
     pub max_note_size: usize,
 }
 
@@ -52,15 +55,18 @@ impl Default for GrpcServerConfig {
 }
 
 impl GrpcServer {
+    /// gRPC server constructor
     pub fn new(database: Arc<Database>, config: GrpcServerConfig, metrics: MetricsGrpc) -> Self {
         let streamer = StreamerCtx::spawn(database.clone());
         Self { database, config, streamer, metrics }
     }
 
+    /// Convert into a service
     pub fn into_service(self) -> MidenPrivateTransportServer<Self> {
         MidenPrivateTransportServer::new(self)
     }
 
+    /// gRPC server running-task
     pub async fn serve(self) -> crate::Result<()> {
         let (health_reporter, health_svc) = tonic_health::server::health_reporter();
         health_reporter.set_serving::<MidenPrivateTransportServer<Self>>().await;

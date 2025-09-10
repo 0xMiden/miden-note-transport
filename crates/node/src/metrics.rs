@@ -8,10 +8,13 @@ use opentelemetry::{
 /// If [`Metrics`] needs to be shared, cloning is recommended.
 #[derive(Debug, Clone)]
 pub struct Metrics {
+    /// [`crate::node::grpc::GrpcServer`] metrics
     pub grpc: MetricsGrpc,
+    /// [`crate::database::Database`] metrics
     pub db: MetricsDatabase,
 }
 
+/// [`crate::node::grpc::GrpcServer`] metrics
 #[derive(Debug, Clone)]
 pub struct MetricsGrpc {
     // -- gRPC
@@ -26,6 +29,7 @@ pub struct MetricsGrpc {
     fetch_notes_replied_notes_size: Histogram<u64>,
 }
 
+/// [`crate::database::Database`] metrics
 #[derive(Debug, Clone)]
 pub struct MetricsDatabase {
     // -- DB
