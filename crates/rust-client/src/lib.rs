@@ -32,28 +32,37 @@
 //!
 //! Below is a brief example on how to send and fetch notes:
 //!
-//! ```rust
+//! ```rust, no_run
+//! use miden_objects::{address::Address, note::{Note, NoteTag}};
 //! use miden_private_transport_client::{
 //!     Error, Result, TransportLayerClient,
 //!     database::{Database, DatabaseConfig},
 //!     grpc::GrpcClient,
+//!     test_utils::{mock_address, mock_note_p2id_with_addresses},
 //! };
-//! use miden_objects::{address::Address, note::{Note, NoteTag}};
 //!
-//! // Initialize the client
-//! let db_config = DatabaseConfig::default();
-//! let db = Database::new_sqlite(db_config).await?;
-//! let grpc = GrpcClient::connect("localhost:8080".to_string(), 1000).await?;
-//! let mut client = TransportLayerClient::new(Box::new(grpc), db, vec![]);
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     // Initialize the client
+//!     let db_config = DatabaseConfig::default();
+//!     let db = Database::new_sqlite(db_config).await?;
+//!     let grpc = GrpcClient::connect("http://localhost:8080".to_string(), 1000).await?;
+//!     let mut client = TransportLayerClient::new(Box::new(grpc), db, vec![]);
 //!
-//! // Send a note
-//! let note: Note = ...;
-//! let recipient: Address = ...;
-//! client.send_note(note, &address).await?;
+//!     // Random data for this example
+//!     let sender: Address = mock_address();
+//!     let recipient: Address = mock_address();
+//!     let note: Note = mock_note_p2id_with_addresses(&sender, &recipient);
 //!
-//! // Fetch notes
-//! let tag: NoteTag = ...;
-//! let notes = client.fetch_notes(tag).await?;
+//!     // Send a note (needs a running server)
+//!     client.send_note(note, &recipient).await?;
+//!
+//!     // Fetch notes (needs a running server)
+//!     let tag = recipient.to_note_tag();
+//!     let notes = client.fetch_notes(tag).await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 
 #![no_std]
