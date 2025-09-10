@@ -7,7 +7,7 @@ const DETAILS_LEN_DEV: usize = 100;
 pub const TAG_LOCAL_ANY: u32 = 0xc000_0000;
 
 pub enum TagGeneration {
-    Sequential,
+    Sequential(u32),
     Random,
 }
 
@@ -18,7 +18,7 @@ pub fn generate_dummy_notes(n: usize, tag_gen: &TagGeneration) -> Vec<(NoteHeade
     (0..n)
         .map(|_| {
             tag = match tag_gen {
-                TagGeneration::Sequential => tag + 1,
+                TagGeneration::Sequential(offset) => tag + 1 + offset,
                 TagGeneration::Random => TAG_LOCAL_ANY + rng.random_range(0..(1 << 29)),
             };
             let header = test_note_header(tag.into());

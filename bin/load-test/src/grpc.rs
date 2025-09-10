@@ -121,7 +121,7 @@ impl GrpcStress {
         self.work(|cfg, tx| async move {
             let mut client = GrpcClient::connect(cfg.endpoint, 1000).await.unwrap();
             let n_requests = cfg.requests / cfg.workers;
-            let notes = generate_dummy_notes(n_requests, &TagGeneration::Sequential);
+            let notes = generate_dummy_notes(n_requests, &TagGeneration::Sequential(0));
 
             for (note_header, note_details) in notes {
                 let size = note_header.get_size_hint() + note_details.len();
@@ -145,12 +145,36 @@ impl GrpcStress {
         .await
     }
 
-    pub async fn fetch_notes(&self) -> Result<StressMetrics> {
-        println!("Running fetch-notes load test");
+    /// `fetch-notes` stress test
+    ///
+    /// Also populates the server with `n` notes for each tag before fetching them.
+    pub async fn fetch_notes(&self, n: usize) -> Result<StressMetrics> {
+        println!("Running fetch-notes {n} load test");
 
-        self.work(|cfg, tx| async move {
+        let timestamp = Utc::now();
+
+        println!("Populating...");
+        let mut handles = vec![];
+        for _ in 0..n {
+            let cfg = self.clone();
+            let handle = tokio::spawn(async move {
+                let mut client = GrpcClient::connect(cfg.endpoint.clone(), 1000).await.unwrap();
+                let notes = generate_dummy_notes(cfg.requests, &TagGeneration::Sequential(0));
+                for (note_header, note_details) in notes {
+                    client.send_note(note_header, note_details).await.unwrap();
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            let _ = handle.await;
+        }
+        println!("Fetching...");
+
+        self.work(move |cfg, tx| async move {
             let mut client = GrpcClient::connect(cfg.endpoint, 1000).await.unwrap();
-            let timestamp = Utc::now();
             let n_requests = cfg.requests / cfg.workers;
 
             let mut tag = super::utils::TAG_LOCAL_ANY;
@@ -190,7 +214,7 @@ impl GrpcStress {
         let cfg = Self::new(self.endpoint.clone(), self.workers / 2, self.requests / 2, self.rate);
 
         // Run both tests and combine metrics
-        let (send_note_res, fetch_notes_res) = tokio::join!(cfg.send_note(), cfg.fetch_notes());
+        let (send_note_res, fetch_notes_res) = tokio::join!(cfg.send_note(), cfg.fetch_notes(0));
         let (send_note_metrics, fetch_notes_metrics) =
             (send_note_res.unwrap(), fetch_notes_res.unwrap());
 

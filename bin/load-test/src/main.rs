@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand};
 
 pub mod grpc;
 pub mod utils;
@@ -33,7 +33,7 @@ struct Args {
     requests: usize,
 
     /// Test scenario to run
-    #[arg(long)]
+    #[command(subcommand)]
     scenario: Scenario,
 
     /// Request rate (requests per second per worker)
@@ -45,10 +45,13 @@ struct Args {
     verbose: bool,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum)]
+#[derive(Copy, Clone, Debug, Subcommand)]
 enum Scenario {
     SendNote,
-    FetchNotes,
+    FetchNotes {
+        /// Fetch `n` notes per request
+        n: usize,
+    },
     Mixed,
     ReqRep,
 }
@@ -88,9 +91,9 @@ async fn main() -> Result<()> {
                 .send_note()
                 .await?
         },
-        Scenario::FetchNotes => {
+        Scenario::FetchNotes { n } => {
             GrpcStress::new(endpoint, args.workers, args.requests, args.rate)
-                .fetch_notes()
+                .fetch_notes(n)
                 .await?
         },
         Scenario::Mixed => {
