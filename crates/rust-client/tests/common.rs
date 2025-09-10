@@ -5,7 +5,7 @@ use miden_private_transport_client::{
     TransportLayerClient,
     database::{Database, DatabaseConfig},
     grpc::GrpcClient,
-    types::mock_address,
+    test_utils::mock_address,
 };
 use miden_private_transport_node::{Node, NodeConfig, node::grpc::GrpcServerConfig};
 use tokio::{task::JoinHandle, time::sleep};

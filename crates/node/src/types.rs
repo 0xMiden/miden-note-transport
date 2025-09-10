@@ -83,4 +83,3 @@ where
         D::Error::custom(format!("Failed to deserialize NoteHeader from bytes: {e:?}"))
     })
 }
-

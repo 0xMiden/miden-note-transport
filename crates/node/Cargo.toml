@@ -67,5 +67,5 @@ chrono = { workspace = true }
 rand = { workspace = true }
 
 [dev-dependencies]
-miden-private-transport-node = { workspace = true, features = ["testing"] }
-serial_test = { workspace = true }
+miden-private-transport-node = { features = ["testing"], workspace = true }
+serial_test                  = { workspace = true }

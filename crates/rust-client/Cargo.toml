@@ -41,6 +41,7 @@ std = [
   "miden-objects/std",
   "rand/std",
 ]
+testing = []
 tonic = [
   "miden-private-transport-proto/transport",
   "std",
@@ -119,7 +120,7 @@ web-sys = { features = [
 
 
 [dev-dependencies]
-miden-private-transport-client = { features = ["sqlite", "tonic"], workspace = true }
+miden-private-transport-client = { features = ["sqlite", "testing", "tonic"], workspace = true }
 miden-private-transport-node   = { workspace = true }
 serial_test                    = { workspace = true }
 tokio                          = { workspace = true }

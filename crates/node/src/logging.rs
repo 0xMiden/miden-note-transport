@@ -30,7 +30,7 @@ pub enum OpenTelemetry {
     /// Enable OpenTelemetry export
     Enabled {
         /// Endpoint
-        endpoint: String
+        endpoint: String,
     },
     /// Disable OpenTelemetry
     Disabled,
@@ -92,9 +92,8 @@ pub fn setup_tracing(cfg: TracingConfig) -> Result<()> {
     // such callers are tests with logging enabled.
     let otel_layer = {
         if let OpenTelemetry::Enabled { endpoint } = cfg.otel {
-            let exporter_builder = opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
-                .with_endpoint(endpoint);
+            let exporter_builder =
+                opentelemetry_otlp::SpanExporter::builder().with_tonic().with_endpoint(endpoint);
 
             match exporter_builder.build() {
                 Ok(exporter) => {

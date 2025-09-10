@@ -1,6 +1,6 @@
 mod common;
 
-use miden_private_transport_client::types::{
+use miden_private_transport_client::test_utils::{
     mock_note_p2id_with_addresses, mock_note_p2id_with_tag_and_addresses,
 };
 

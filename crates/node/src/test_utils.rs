@@ -1,7 +1,7 @@
 use miden_objects::{
     Felt, Word,
     account::AccountId,
-    note::{NoteExecutionHint, NoteHeader, NoteMetadata, NoteId, NoteTag, NoteType},
+    note::{NoteExecutionHint, NoteHeader, NoteId, NoteMetadata, NoteTag, NoteType},
     testing::account_id::ACCOUNT_ID_MAX_ZEROES,
 };
 use rand::Rng;

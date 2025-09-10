@@ -109,10 +109,7 @@ mod tests {
     use chrono::Utc;
 
     use super::*;
-    use crate::{
-        metrics::Metrics,
-        test_utils::test_note_header,
-    };
+    use crate::{metrics::Metrics, test_utils::test_note_header};
 
     const TAG_LOCAL_ANY: u32 = 0xc000_0000;
 

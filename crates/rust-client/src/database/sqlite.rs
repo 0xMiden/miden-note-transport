@@ -282,7 +282,7 @@ mod tests {
     use miden_objects::{note::NoteDetails, utils::Serializable};
 
     use super::{super::Database, *};
-    use crate::types::mock_note_p2id;
+    use crate::test_utils::mock_note_p2id;
 
     #[tokio::test]
     async fn test_client_database_sqlite_operations() {

@@ -41,6 +41,7 @@ type Service = Timeout<Channel>;
 #[cfg(feature = "web-tonic")]
 type Service = tonic_web_wasm_client::Client;
 
+/// gRPC client
 #[derive(Clone)]
 pub struct GrpcClient {
     client: MidenPrivateTransportClient<Service>,
@@ -48,6 +49,7 @@ pub struct GrpcClient {
 }
 
 impl GrpcClient {
+    /// gRPC client constructor
     #[cfg(feature = "tonic")]
     pub async fn connect(endpoint: String, timeout_ms: u64) -> Result<Self> {
         let tls = ClientTlsConfig::new().with_native_roots();
@@ -64,6 +66,7 @@ impl GrpcClient {
         Ok(Self { client, health_client })
     }
 
+    /// gRPC client (WASM) constructor
     #[cfg(feature = "web-tonic")]
     pub async fn connect(endpoint: String, _timeout_ms: u64) -> Result<Self> {
         let client = tonic_web_wasm_client::Client::new(endpoint);
@@ -73,6 +76,10 @@ impl GrpcClient {
         Ok(Self { client, health_client })
     }
 
+    /// Send a note
+    ///
+    /// Pushes a note to the transport layer.
+    /// While the note header goes in plaintext, the provided note details can be encrypted.
     pub async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
         let request = SendNoteRequest {
             note: Some(TransportNote { header: header.to_bytes(), details }),
@@ -94,6 +101,10 @@ impl GrpcClient {
         Ok(note_id)
     }
 
+    /// Fetch notes
+    ///
+    /// Downloads notes for a given tag.
+    /// Only notes timestamped after the provided timestamp are returned.
     pub async fn fetch_notes(
         &mut self,
         tag: NoteTag,
@@ -146,6 +157,10 @@ impl GrpcClient {
         Ok(notes)
     }
 
+    /// Stream notes
+    ///
+    /// Subscribes to a given tag.
+    /// New notes are received periodically.
     pub async fn stream_notes(
         &mut self,
         tag: NoteTag,
@@ -221,6 +236,7 @@ pub struct NoteStreamAdapter {
 }
 
 impl NoteStreamAdapter {
+    /// Create a new [`NoteStreamAdapter`]
     pub fn new(stream: Streaming<StreamNotesUpdate>) -> Self {
         Self { inner: stream }
     }

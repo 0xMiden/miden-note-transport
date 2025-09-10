@@ -1,5 +1,7 @@
+/// IndexedDB implementation
 #[cfg(feature = "idxdb")]
 pub mod idxdb;
+/// SQLite implementation
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
@@ -56,7 +58,9 @@ pub trait DatabaseBackend: Send + Sync {
 /// Client database configuration
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
+    /// Database URL
     pub url: String,
+    /// Maximum size of a stored note
     pub max_note_size: usize,
 }
 
@@ -146,16 +150,22 @@ impl Database {
     }
 }
 
+/// [`Database`] error
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseError {
+    /// Configuration error
     #[error("Configuration error: {0}")]
     Configuration(String),
+    /// Encoding error
     #[error("Encoding error: {0}")]
     Encoding(String),
+    /// Protocol error
     #[error("Protocol error: {0}")]
     Protocol(String),
+    /// Not found in database error
     #[error("Not found: {0}")]
     NotFound(String),
+    /// Generic error
     #[error("{0}")]
     Generic(#[from] anyhow::Error),
 }
@@ -163,8 +173,11 @@ pub enum DatabaseError {
 /// Encrypted note stored in the client database
 #[derive(Debug, Clone)]
 pub struct StoredNote {
+    /// Note header
     pub header: NoteHeader,
+    /// Note details, can be encrypted
     pub details: Vec<u8>,
+    /// Note reference timestamp
     pub created_at: DateTime<Utc>,
 }
 

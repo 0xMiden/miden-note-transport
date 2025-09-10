@@ -64,11 +64,7 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::{
-        metrics::Metrics,
-        test_utils::test_note_header,
-        types::StoredNote,
-    };
+    use crate::{metrics::Metrics, test_utils::test_note_header, types::StoredNote};
 
     fn note_at(age: Duration) -> StoredNote {
         StoredNote {
