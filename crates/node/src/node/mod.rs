@@ -9,6 +9,7 @@ use crate::{
     metrics::Metrics,
 };
 
+/// gRPC server
 pub mod grpc;
 
 /// Miden Private Transport Node
@@ -24,13 +25,17 @@ pub struct Node {
     _database: Arc<Database>,
 }
 
+/// Node configuration
 #[derive(Debug, Default, Clone)]
 pub struct NodeConfig {
+    /// gRPC server configuration
     pub grpc: GrpcServerConfig,
+    /// Database configuration
     pub database: DatabaseConfig,
 }
 
 impl Node {
+    /// Node constructor
     pub async fn init(config: NodeConfig) -> Result<Self> {
         let metrics = Metrics::default();
         let database =
@@ -48,6 +53,7 @@ impl Node {
         })
     }
 
+    /// Node running-task
     pub async fn entrypoint(self) {
         info!("Starting Miden Transport Node");
         tokio::spawn(self.maintenance.entrypoint());

@@ -18,18 +18,26 @@ use tracing_subscriber::{
 /// Configures [`setup_tracing`] to enable or disable the open-telemetry exporter.
 #[derive(Clone)]
 pub struct TracingConfig {
+    /// OpenTelemetry configuration
     pub otel: OpenTelemetry,
+    /// Export data JSON-formatted
     pub json_format: bool,
 }
 
-/// Open Telemetry configuration
+/// OpenTelemetry configuration
 #[derive(Clone)]
 pub enum OpenTelemetry {
-    Enabled { traces_endpoint: String },
+    /// Enable OpenTelemetry export
+    Enabled {
+        /// Endpoint
+        endpoint: String
+    },
+    /// Disable OpenTelemetry
     Disabled,
 }
 
 impl TracingConfig {
+    /// Tracing configuration constructor using environment variables
     pub fn from_env() -> Self {
         let otel = {
             let otel_enabled = std::env::var("OTEL_ENABLED")
@@ -38,7 +46,7 @@ impl TracingConfig {
                 .unwrap_or(false);
             if otel_enabled {
                 OpenTelemetry::Enabled {
-                    traces_endpoint: std::env::var("OTEL_TRACES_ENDPOINT")
+                    endpoint: std::env::var("OTEL_TRACES_ENDPOINT")
                         .ok()
                         .unwrap_or("http://localhost:4317".to_string()),
                 }
@@ -58,6 +66,7 @@ impl TracingConfig {
 }
 
 impl OpenTelemetry {
+    /// Is OpenTelemetry enabled
     pub fn is_enabled(&self) -> bool {
         matches!(self, OpenTelemetry::Enabled { .. })
     }
@@ -82,10 +91,10 @@ pub fn setup_tracing(cfg: TracingConfig) -> Result<()> {
     // `then_some`) to avoid crashing sync callers (with OpenTelemetry::Disabled set). Examples of
     // such callers are tests with logging enabled.
     let otel_layer = {
-        if let OpenTelemetry::Enabled { traces_endpoint } = cfg.otel {
+        if let OpenTelemetry::Enabled { endpoint } = cfg.otel {
             let exporter_builder = opentelemetry_otlp::SpanExporter::builder()
                 .with_tonic()
-                .with_endpoint(traces_endpoint);
+                .with_endpoint(endpoint);
 
             match exporter_builder.build() {
                 Ok(exporter) => {
@@ -107,11 +116,11 @@ pub fn setup_tracing(cfg: TracingConfig) -> Result<()> {
 
 /// Setup OpenTelemetry metrics export using the proper SDK API
 fn setup_metrics_export(otel_cfg: &OpenTelemetry) -> Result<()> {
-    if let OpenTelemetry::Enabled { traces_endpoint } = otel_cfg {
+    if let OpenTelemetry::Enabled { endpoint } = otel_cfg {
         // Configure OTLP metrics pipeline
         let exporter = opentelemetry_otlp::MetricExporter::builder()
             .with_tonic()
-            .with_endpoint(traces_endpoint)
+            .with_endpoint(endpoint)
             .build()?;
 
         let provider = SdkMeterProvider::builder()
