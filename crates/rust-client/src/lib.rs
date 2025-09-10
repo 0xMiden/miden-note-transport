@@ -3,7 +3,7 @@
 //! This crate provides a lightweight client to communicate optionally-encrypted private notes with
 //! the Miden Transport Layer.
 //!
-//! `no-std` is supported, with support also for WASM enviroments.
+//! `no-std` is supported, with support also for WASM environments.
 //!
 //! ## Overview
 //!

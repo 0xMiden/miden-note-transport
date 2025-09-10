@@ -18,7 +18,7 @@ This repository contains the following crates:
 
 - `node`: Node/server library;
 - `rust-client`: Rust client library;
-- `web-client`: Client implementation targetting a web-enviroment. Typescript bindings to the Rust client are provided. WASM-compatible.
+- `web-client`: Client implementation targeting a web-environment. Typescript bindings to the Rust client are provided. WASM-compatible.
 - `proto`: Protobuf definitions and generated code;
 
 ### Binaries
