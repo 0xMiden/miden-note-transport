@@ -31,7 +31,7 @@ idxdb = [
   "dep:wasm-bindgen-futures",
   "dep:web-sys",
 ]
-sqlite = ["dep:sqlx", "std"]
+sqlite = ["dep:deadpool", "dep:deadpool-sync", "dep:hex", "dep:rusqlite", "dep:rusqlite_migration", "std"]
 std = [
   "dep:opentelemetry",
   "dep:opentelemetry-otlp",
@@ -74,7 +74,12 @@ serde_json = { workspace = true }
 prost-types = { workspace = true }
 
 # Database
-sqlx = { optional = true, workspace = true }
+deadpool           = { default-features = false, features = ["managed", "rt_tokio_1"], optional = true, version = "0.12" }
+deadpool-sync      = { optional = true, version = "0.1" }
+hex                = { optional = true, workspace = true }
+rusqlite           = { features = ["array", "bundled", "vtab"], optional = true, version = "0.32" }
+rusqlite_migration = { optional = true, version = "1.0" }
+tokio              = { optional = true, workspace = true }
 
 # Logging
 opentelemetry         = { optional = true, workspace = true }

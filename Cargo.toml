@@ -48,7 +48,6 @@ rand = { version = "0.9" }
 serde = { features = ["derive"], version = "1.0" }
 serde_json = { version = "1.0" }
 serial_test = { version = "3.2" }
-sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8" }
 thiserror = { default-features = false, version = "2.0" }
 tokio = { features = ["macros", "net", "rt-multi-thread"], version = "1.47" }
 tonic = { default-features = false, version = "0.13" }

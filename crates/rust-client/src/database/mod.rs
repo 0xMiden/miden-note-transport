@@ -51,11 +51,11 @@ pub trait DatabaseBackend: Send + Sync {
     /// Get database statistics
     async fn get_stats(&self) -> Result<DatabaseStats, DatabaseError>;
 
-    /// Clean up old data based on retention policy
+    /// Clean up old data based on retention period
     async fn cleanup_old_data(&self, retention_days: u32) -> Result<u64, DatabaseError>;
 }
 
-/// Client database configuration
+/// Database configuration
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
     /// Database URL
@@ -67,7 +67,7 @@ pub struct DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "sqlite::memory:".to_string(),
+            url: ":memory:".to_string(),
             max_note_size: 1024 * 1024, // 1MB default
         }
     }
@@ -84,11 +84,11 @@ impl Database {
         Self { backend }
     }
 
+    /// Create a new `SQLite` database
     #[cfg(feature = "sqlite")]
-    /// Create a new SQLite-based client database
     pub async fn new_sqlite(config: DatabaseConfig) -> Result<Self, DatabaseError> {
         let backend = sqlite::SqliteDatabase::connect(config).await?;
-        Ok(Self::new(Box::new(backend)))
+        Ok(Self { backend: Box::new(backend) })
     }
 
     /// Store an encrypted note
@@ -156,18 +156,22 @@ pub enum DatabaseError {
     /// Configuration error
     #[error("Configuration error: {0}")]
     Configuration(String),
-    /// Encoding error
-    #[error("Encoding error: {0}")]
-    Encoding(String),
+
     /// Protocol error
     #[error("Protocol error: {0}")]
     Protocol(String),
+
+    /// Encoding error
+    #[error("Encoding error: {0}")]
+    Encoding(String),
+
     /// Not found in database error
     #[error("Not found: {0}")]
     NotFound(String),
-    /// Generic error
-    #[error("{0}")]
-    Generic(#[from] anyhow::Error),
+
+    /// Internal error
+    #[error("Internal error: {0}")]
+    Internal(#[from] anyhow::Error),
 }
 
 /// Encrypted note stored in the client database
@@ -181,13 +185,13 @@ pub struct StoredNote {
     pub created_at: DateTime<Utc>,
 }
 
-/// Client database statistics
+/// Database statistics
 #[derive(Debug, Clone)]
 pub struct DatabaseStats {
     /// Downloaded notes
     pub fetched_notes_count: u64,
     /// Stored (kept) notes
     pub stored_notes_count: u64,
-    /// Stored tags
+    /// Unique tags count
     pub unique_tags_count: u64,
 }
