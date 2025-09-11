@@ -43,7 +43,7 @@ serde_json = { workspace = true }
 prost-types = { workspace = true }
 
 # Database
-sqlx = { workspace = true }
+sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8.6" }
 
 # Logging
 opentelemetry         = { workspace = true }
