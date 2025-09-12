@@ -2,11 +2,11 @@ mod streaming;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use miden_objects::utils::Deserializable;
 use miden_private_transport_proto::miden_private_transport::{
     FetchNotesRequest, FetchNotesResponse, SendNoteRequest, SendNoteResponse, StatsResponse,
-    StreamNotesRequest, TransportNoteTimestamped,
+    StreamNotesRequest, TransportNotePg,
     miden_private_transport_server::MidenPrivateTransportServer,
 };
 use rand::Rng;
@@ -144,9 +144,7 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
 
         timer.finish("ok");
 
-        Ok(tonic::Response::new(SendNoteResponse {
-            id: note_for_db.header.id().to_hex(),
-        }))
+        Ok(tonic::Response::new(SendNoteResponse {}))
     }
 
     #[tracing::instrument(skip(self), fields(operation = "grpc.fetch_notes.request"))]
@@ -158,35 +156,23 @@ impl miden_private_transport_proto::miden_private_transport::miden_private_trans
 
         let request_data = request.into_inner();
         let tag = request_data.tag;
-
-        // Default to epoch start (1970-01-01) to fetch all notes if no timestamp provided
-        let timestamp = if let Some(ts) = request_data.timestamp {
-            DateTime::from_timestamp(
-                ts.seconds,
-                ts.nanos.try_into().map_err(|_| {
-                    tonic::Status::invalid_argument("Negative timestamp nanoseconds".to_string())
-                })?,
-            )
-            .ok_or_else(|| tonic::Status::invalid_argument("Invalid timestamp"))?
-        } else {
-            DateTime::from_timestamp(0, 0).unwrap()
-        };
+        let cursor = request_data.cursor;
 
         let notes = self
             .database
-            .fetch_notes(tag.into(), timestamp)
+            .fetch_notes(tag.into(), cursor)
             .await.map_err(|e| tonic::Status::internal(format!("Failed to fetch notes: {e:?}")))?;
 
         // Convert to protobuf format
         let proto_notes: Result<Vec<_>, _> = notes
             .into_iter()
-            .map(TransportNoteTimestamped::try_from)
+            .map(TransportNotePg::try_from)
             .collect();
-        let proto_notes = proto_notes.map_err(|e| tonic::Status::internal(format!("Failed converting into proto TransportNoteTimestamped: {e}")))?;
+        let proto_notes = proto_notes.map_err(|e| tonic::Status::internal(format!("Failed converting into proto TransportNotePg: {e}")))?;
 
         timer.finish("ok");
 
-        let proto_notes_size = proto_notes.iter().map(|tsnote| tsnote.note.as_ref().map_or(0, |pnote| (pnote.header.len() + pnote.details.len()) as u64)).sum();
+        let proto_notes_size = proto_notes.iter().map(|pgnote| pgnote.note.as_ref().map_or(0, |pnote| (pnote.header.len() + pnote.details.len()) as u64)).sum();
         self.metrics.grpc_fetch_notes_response(
             proto_notes.len() as u64,
             proto_notes_size,

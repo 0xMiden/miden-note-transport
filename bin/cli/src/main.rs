@@ -207,11 +207,11 @@ async fn stream_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()>
             Ok(notes) => {
                 for (i, note_info) in notes.iter().enumerate() {
                     println!(
-                        "Note {}:\n Header: {:?}\n Details: {} bytes\n Created: {:?}\n",
+                        "Note {}:\n Header: {:?}\n Details: {} bytes\n Cursor: {}\n",
                         i + 1,
                         note_info.header,
                         note_info.details.len(),
-                        note_info.created_at
+                        note_info.cursor
                     );
                 }
             },

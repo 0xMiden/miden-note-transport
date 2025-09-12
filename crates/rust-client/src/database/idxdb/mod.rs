@@ -7,6 +7,8 @@
 //! **Note:** This implementation is only available when targeting WebAssembly with the `idxdb`
 //! feature enabled.
 
+#![allow(missing_docs)]
+
 use alloc::{boxed::Box, vec::Vec};
 
 use chrono::{DateTime, Utc};

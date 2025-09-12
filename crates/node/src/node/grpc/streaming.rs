@@ -1,19 +1,13 @@
 use core::task::{Poll, Waker};
 use std::{collections::BTreeMap, sync::Arc};
 
-use chrono::{DateTime, Utc};
-use miden_private_transport_proto::miden_private_transport::{
-    StreamNotesUpdate, TransportNoteTimestamped,
-};
+use miden_private_transport_proto::miden_private_transport::{StreamNotesUpdate, TransportNotePg};
 use tokio::{
     sync::mpsc,
     time::{Duration, sleep},
 };
 
-use crate::{
-    database::Database,
-    types::{NoteTag, proto_timestamp_to_datetime},
-};
+use crate::{database::Database, types::NoteTag};
 
 /// Streaming handler
 pub struct NoteStreamer {
@@ -48,15 +42,15 @@ pub(crate) enum StreamerMessage {
 
 /// Tag data tracking
 pub struct TagData {
-    lts: DateTime<Utc>,
-    subs: BTreeMap<u64, mpsc::Sender<Vec<TransportNoteTimestamped>>>,
+    lts: u64,
+    subs: BTreeMap<u64, mpsc::Sender<Vec<TransportNotePg>>>,
 }
 
 /// Subscription
 pub struct Sub {
     id: u64,
     tag: NoteTag,
-    rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
+    rx: mpsc::Receiver<Vec<TransportNotePg>>,
     streamer_tx: mpsc::Sender<StreamerMessage>,
 }
 
@@ -64,7 +58,7 @@ pub struct Sub {
 pub struct Subface {
     id: u64,
     tag: NoteTag,
-    tx: mpsc::Sender<Vec<TransportNoteTimestamped>>,
+    tx: mpsc::Sender<Vec<TransportNotePg>>,
 }
 
 impl NoteStreamerManager {
@@ -78,7 +72,7 @@ impl NoteStreamerManager {
 
     pub(super) async fn query_updates(
         &self,
-    ) -> crate::Result<Vec<(NoteTag, Vec<TransportNoteTimestamped>)>> {
+    ) -> crate::Result<Vec<(NoteTag, Vec<TransportNotePg>)>> {
         // Update period
         sleep(Duration::from_millis(500)).await;
 
@@ -88,11 +82,9 @@ impl NoteStreamerManager {
 
             // Convert to protobuf format
             let pnotes: Result<Vec<_>, _> =
-                snotes.into_iter().map(TransportNoteTimestamped::try_from).collect();
+                snotes.into_iter().map(TransportNotePg::try_from).collect();
             let pnotes = pnotes.map_err(|e| {
-                crate::Error::Internal(format!(
-                    "Failed converting into proto TransportNoteTimestamped: {e}"
-                ))
+                crate::Error::Internal(format!("Failed converting into proto TransportNotePg: {e}"))
             })?;
 
             if !pnotes.is_empty() {
@@ -103,10 +95,7 @@ impl NoteStreamerManager {
         Ok(updates)
     }
 
-    pub(super) fn forward_updates(
-        &mut self,
-        tag_notes: Vec<(NoteTag, Vec<TransportNoteTimestamped>)>,
-    ) {
+    pub(super) fn forward_updates(&mut self, tag_notes: Vec<(NoteTag, Vec<TransportNotePg>)>) {
         let mut remove_subs = vec![];
         // Forward updates to subs
         for (tag, notes) in tag_notes {
@@ -129,18 +118,11 @@ impl NoteStreamerManager {
         }
     }
 
-    pub(super) fn update_timestamps(
-        &mut self,
-        tag_notes: &[(NoteTag, Vec<TransportNoteTimestamped>)],
-    ) {
-        // Update query timestamps, to the timestamp of the most recent note
+    pub(super) fn update_timestamps(&mut self, tag_notes: &[(NoteTag, Vec<TransportNotePg>)]) {
+        // Update query cursors, to the cursor of the most recent note
         for (tag, notes) in tag_notes {
             if let Some(tag_data) = self.tags.get_mut(tag) {
-                let lts_opt = notes
-                    .iter()
-                    .map(|note| note.timestamp.unwrap_or_default())
-                    .max_by_key(|ts| proto_timestamp_to_datetime(*ts).ok())
-                    .and_then(|pts| proto_timestamp_to_datetime(pts).ok());
+                let lts_opt = notes.iter().map(|note| note.cursor).max();
                 if let Some(lts) = lts_opt {
                     tag_data.lts = lts;
                 }
@@ -224,7 +206,7 @@ impl Sub {
     pub(crate) fn new(
         id: u64,
         tag: NoteTag,
-        rx: mpsc::Receiver<Vec<TransportNoteTimestamped>>,
+        rx: mpsc::Receiver<Vec<TransportNotePg>>,
         streamer_tx: mpsc::Sender<StreamerMessage>,
     ) -> Self {
         Self { id, tag, rx, streamer_tx }
@@ -232,14 +214,14 @@ impl Sub {
 }
 
 impl Subface {
-    pub fn new(id: u64, tag: NoteTag, tx: mpsc::Sender<Vec<TransportNoteTimestamped>>) -> Self {
+    pub fn new(id: u64, tag: NoteTag, tx: mpsc::Sender<Vec<TransportNotePg>>) -> Self {
         Self { id, tag, tx }
     }
 }
 
 impl TagData {
     pub fn new() -> Self {
-        Self { lts: Utc::now(), subs: BTreeMap::new() }
+        Self { lts: 0, subs: BTreeMap::new() }
     }
 }
 

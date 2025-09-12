@@ -29,13 +29,13 @@ pub async fn store_note(
 ) -> Result<(), DatabaseError> {
     let header_bytes = serialize_note_header(header)?;
     let note_id_bytes = serialize_note_id(&header.id())?;
-    let created_at_str = created_at.to_rfc3339();
+    let created_at_micros = created_at.timestamp_micros();
 
     let js_value = JsFuture::from(idxdb_store_note(
         note_id_bytes,
         header_bytes,
         encrypted_data.to_vec(),
-        created_at_str,
+        created_at_micros,
     ))
     .await
     .map_err(|e| DatabaseError::Protocol(format!("Failed to store note: {:?}", e)))?;
@@ -63,9 +63,9 @@ pub async fn get_stored_note(note_id: &NoteId) -> Result<Option<StoredNote>, Dat
     })?;
 
     let header = deserialize_note_header(&note_data.header)?;
-    let created_at = DateTime::parse_from_rfc3339(&note_data.created_at)
-        .map_err(|e| DatabaseError::Encoding(format!("Invalid timestamp: {}", e)))?
-        .with_timezone(&Utc);
+    let created_at = DateTime::from_timestamp_micros(note_data.created_at).ok_or_else(|| {
+        DatabaseError::Encoding(format!("Invalid timestamp microseconds: {}", note_data.created_at))
+    })?;
 
     Ok(Some(StoredNote {
         header,
@@ -88,9 +88,13 @@ pub async fn get_stored_notes_for_tag(tag: NoteTag) -> Result<Vec<StoredNote>, D
     let mut notes = Vec::new();
     for note_data in notes_data {
         let header = deserialize_note_header(&note_data.header)?;
-        let created_at = DateTime::parse_from_rfc3339(&note_data.created_at)
-            .map_err(|e| DatabaseError::Encoding(format!("Invalid timestamp: {}", e)))?
-            .with_timezone(&Utc);
+        let created_at =
+            DateTime::from_timestamp_micros(note_data.created_at).ok_or_else(|| {
+                DatabaseError::Encoding(format!(
+                    "Invalid timestamp microseconds: {}",
+                    note_data.created_at
+                ))
+            })?;
 
         notes.push(StoredNote {
             header,

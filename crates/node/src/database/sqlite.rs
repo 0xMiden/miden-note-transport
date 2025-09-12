@@ -33,7 +33,7 @@ impl DatabaseBackend for SqliteDatabase {
                 tag INTEGER NOT NULL,
                 header BLOB NOT NULL,
                 details BLOB NOT NULL,
-                created_at TEXT NOT NULL
+                created_at INTEGER NOT NULL
             ) STRICT;
             ",
         )
@@ -65,7 +65,7 @@ impl DatabaseBackend for SqliteDatabase {
         .bind(i64::from(note.header.metadata().tag().as_u32()))
         .bind(note.header.to_bytes())
         .bind(&note.details)
-        .bind(note.created_at.to_rfc3339())
+        .bind(note.created_at.timestamp_micros())
         .execute(&self.pool)
         .await?;
 
@@ -75,9 +75,12 @@ impl DatabaseBackend for SqliteDatabase {
     }
 
     #[tracing::instrument(skip(self), fields(operation = "db.fetch_notes"))]
-    async fn fetch_notes(&self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<StoredNote>> {
+    async fn fetch_notes(&self, tag: NoteTag, cursor: u64) -> Result<Vec<StoredNote>> {
         let timer = self.metrics.db_fetch_notes();
 
+        let cursor_i64: i64 = cursor
+            .try_into()
+            .map_err(|_| sqlx::Error::Configuration("Cursor too large for SQLite".into()))?;
         let query = sqlx::query(
             r"
                 SELECT id, tag, header, details, created_at
@@ -87,7 +90,7 @@ impl DatabaseBackend for SqliteDatabase {
                 ",
         )
         .bind(i64::from(tag.as_u32()))
-        .bind(timestamp.to_rfc3339());
+        .bind(cursor_i64);
 
         let rows = query.fetch_all(&self.pool).await?;
         let mut notes = Vec::new();
@@ -95,15 +98,17 @@ impl DatabaseBackend for SqliteDatabase {
         for row in rows {
             let header_bytes: Vec<u8> = row.try_get("header")?;
             let details: Vec<u8> = row.try_get("details")?;
-            let created_at_str: String = row.try_get("created_at")?;
-            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|e| {
+            let created_at_micros: i64 = row.try_get("created_at")?;
+            let created_at =
+                DateTime::from_timestamp_micros(created_at_micros).ok_or_else(|| {
                     Error::Database(sqlx::Error::ColumnDecode {
                         index: "created_at".to_string(),
-                        source: Box::new(e),
+                        source: Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("Invalid timestamp microseconds: {created_at_micros}"),
+                        )),
                     })
-                })?
-                .with_timezone(&Utc);
+                })?;
 
             let header = NoteHeader::read_from_bytes(&header_bytes).map_err(|e| {
                 Error::Database(sqlx::Error::ColumnDecode {
@@ -141,7 +146,7 @@ impl DatabaseBackend for SqliteDatabase {
             DELETE FROM notes WHERE created_at < ?
             ",
         )
-        .bind(cutoff_date.to_rfc3339())
+        .bind(cutoff_date.timestamp_micros())
         .execute(&self.pool)
         .await?;
 

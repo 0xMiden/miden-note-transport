@@ -14,14 +14,12 @@ use core::{
     task::{Context, Poll},
 };
 
-use chrono::{DateTime, Utc};
 use futures::Stream;
 use miden_objects::utils::{Deserializable, Serializable};
 use miden_private_transport_proto::miden_private_transport::{
     FetchNotesRequest, SendNoteRequest, StreamNotesRequest, StreamNotesUpdate, TransportNote,
     miden_private_transport_client::MidenPrivateTransportClient,
 };
-use prost_types;
 use tonic::{Request, Streaming};
 use tonic_health::pb::{HealthCheckRequest, health_client::HealthClient};
 #[cfg(feature = "tonic")]
@@ -33,7 +31,7 @@ use {
 
 use crate::{
     Error, NoteStream, Result,
-    types::{NoteHeader, NoteId, NoteInfo, NoteTag, proto_timestamp_to_datetime},
+    types::{NoteHeader, NoteInfo, NoteTag},
 };
 
 #[cfg(feature = "tonic")]
@@ -80,7 +78,7 @@ impl GrpcClient {
     ///
     /// Pushes a note to the transport layer.
     /// While the note header goes in plaintext, the provided note details can be encrypted.
-    pub async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
+    async fn send_note_internal(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<()> {
         let request = SendNoteRequest {
             note: Some(TransportNote { header: header.to_bytes(), details }),
         };
@@ -92,34 +90,17 @@ impl GrpcClient {
             .await
             .map_err(|e| Error::Internal(format!("Send note failed: {e:?}")))?;
 
-        let response = response.into_inner();
+        let _response = response.into_inner();
 
-        // Parse note ID from hex string
-        let note_id = NoteId::try_from_hex(&response.id)
-            .map_err(|e| Error::Internal(format!("Invalid note ID: {e:?}")))?;
-
-        Ok(note_id)
+        Ok(())
     }
 
     /// Fetch notes
     ///
     /// Downloads notes for a given tag.
-    /// Only notes timestamped after the provided timestamp are returned.
-    pub async fn fetch_notes(
-        &mut self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<Vec<NoteInfo>> {
-        let request = FetchNotesRequest {
-            tag: tag.as_u32(),
-            timestamp: Some(prost_types::Timestamp {
-                seconds: timestamp.timestamp(),
-                nanos: timestamp
-                    .timestamp_subsec_nanos()
-                    .try_into()
-                    .map_err(|_| Error::Internal("Timestamp nanoseconds too large".to_string()))?,
-            }),
-        };
+    /// Only notes with cursor greater than the provided cursor are returned.
+    pub async fn fetch_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Vec<NoteInfo>> {
+        let request = FetchNotesRequest { tag: tag.as_u32(), cursor };
 
         let response = self
             .client
@@ -130,27 +111,20 @@ impl GrpcClient {
 
         let response = response.into_inner();
 
-        // Convert protobuf notes to internal format and track the most recent received timestamp
+        // Convert protobuf notes to internal format
         let mut notes = Vec::new();
 
-        for pts_note in response.notes {
-            let note = pts_note
+        for pg_note in response.notes {
+            let note = pg_note
                 .note
                 .ok_or_else(|| Error::Internal("Fetched note has no data".to_string()))?;
             let header = NoteHeader::read_from_bytes(&note.header)
                 .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
 
-            // Convert protobuf timestamp to DateTime
-            let received_at = if let Some(timestamp) = pts_note.timestamp {
-                proto_timestamp_to_datetime(timestamp)?
-            } else {
-                Utc::now() // Fallback to current time if timestamp is missing
-            };
-
             notes.push(NoteInfo {
                 header,
                 details: note.details,
-                created_at: received_at,
+                cursor: pg_note.cursor,
             });
         }
 
@@ -161,21 +135,8 @@ impl GrpcClient {
     ///
     /// Subscribes to a given tag.
     /// New notes are received periodically.
-    pub async fn stream_notes(
-        &mut self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<NoteStreamAdapter> {
-        let request = StreamNotesRequest {
-            tag: tag.as_u32(),
-            timestamp: Some(prost_types::Timestamp {
-                seconds: timestamp.timestamp(),
-                nanos: timestamp
-                    .timestamp_subsec_nanos()
-                    .try_into()
-                    .map_err(|_| Error::Internal("Timestamp nanoseconds too large".to_string()))?,
-            }),
-        };
+    pub async fn stream_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<NoteStreamAdapter> {
+        let request = StreamNotesRequest { tag: tag.as_u32(), cursor };
 
         let response = self
             .client
@@ -207,25 +168,20 @@ impl GrpcClient {
 #[cfg_attr(not(feature = "web-tonic"), async_trait::async_trait)]
 #[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 impl super::TransportClient for GrpcClient {
-    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId> {
-        let note_id = self.send_note(header, details).await?;
-        Ok(note_id)
+    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<()> {
+        self.send_note_internal(header, details).await
     }
 
     async fn fetch_notes(
         &mut self,
         tag: NoteTag,
-        timestamp: DateTime<Utc>,
+        cursor: u64,
     ) -> Result<Vec<crate::types::NoteInfo>> {
-        self.fetch_notes(tag, timestamp).await
+        self.fetch_notes(tag, cursor).await
     }
 
-    async fn stream_notes(
-        &mut self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<Box<dyn NoteStream>> {
-        let stream = self.stream_notes(tag, timestamp).await?;
+    async fn stream_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Box<dyn NoteStream>> {
+        let stream = self.stream_notes(tag, cursor).await?;
         Ok(Box::new(stream))
     }
 }
@@ -250,22 +206,15 @@ impl Stream for NoteStreamAdapter {
             Poll::Ready(Some(Ok(update))) => {
                 // Convert StreamNotesUpdate to Vec<NoteInfo>
                 let mut notes = Vec::new();
-                for proto_note in update.notes {
-                    if let Some(note) = proto_note.note {
+                for pg_note in update.notes {
+                    if let Some(note) = pg_note.note {
                         let header = NoteHeader::read_from_bytes(&note.header)
                             .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
-
-                        // Convert protobuf timestamp to DateTime
-                        let created_at = if let Some(timestamp) = proto_note.timestamp {
-                            proto_timestamp_to_datetime(timestamp)?
-                        } else {
-                            Utc::now() // Fallback to current time if timestamp is missing
-                        };
 
                         notes.push(NoteInfo {
                             header,
                             details: note.details,
-                            created_at,
+                            cursor: pg_note.cursor,
                         });
                     }
                 }

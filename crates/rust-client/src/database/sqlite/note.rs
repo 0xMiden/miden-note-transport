@@ -1,7 +1,4 @@
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{string::ToString, vec::Vec};
 
 use chrono::{DateTime, Utc};
 use miden_objects::{
@@ -46,7 +43,7 @@ impl NoteOperations {
                 i64::from(tag.as_u32()),
                 &header_bytes,
                 &details,
-                created_at.to_rfc3339()
+                created_at.timestamp_micros()
             ],
         )?;
         Ok(())
@@ -67,13 +64,16 @@ impl NoteOperations {
         if let Some(row) = rows.next()? {
             let header_bytes: Vec<u8> = row.get("header")?;
             let details: Vec<u8> = row.get("details")?;
-            let created_at_str: String = row.get("created_at")?;
+            let created_at_micros: i64 = row.get("created_at")?;
 
             let header = NoteHeader::read_from_bytes(&header_bytes)
                 .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
-            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|e| DatabaseError::Encoding(e.to_string()))?
-                .with_timezone(&Utc);
+            let created_at =
+                DateTime::from_timestamp_micros(created_at_micros).ok_or_else(|| {
+                    DatabaseError::Encoding(format!(
+                        "Invalid timestamp microseconds: {created_at_micros}"
+                    ))
+                })?;
 
             Ok(Some(StoredNote { header, details, created_at }))
         } else {
@@ -93,13 +93,16 @@ impl NoteOperations {
         while let Some(row) = rows.next()? {
             let header_bytes: Vec<u8> = row.get("header")?;
             let details: Vec<u8> = row.get("details")?;
-            let created_at_str: String = row.get("created_at")?;
+            let created_at_micros: i64 = row.get("created_at")?;
 
             let header = NoteHeader::read_from_bytes(&header_bytes)
                 .map_err(|e| DatabaseError::Encoding(e.to_string()))?;
-            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|e| DatabaseError::Encoding(e.to_string()))?
-                .with_timezone(&Utc);
+            let created_at =
+                DateTime::from_timestamp_micros(created_at_micros).ok_or_else(|| {
+                    DatabaseError::Encoding(format!(
+                        "Invalid timestamp microseconds: {created_at_micros}"
+                    ))
+                })?;
 
             notes.push(StoredNote { header, details, created_at });
         }

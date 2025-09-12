@@ -23,7 +23,7 @@ crate-type = ["cdylib"]
 default = []
 
 [dependencies]
-miden-private-transport-client = { features = ["idxdb", "web-tonic"], workspace = true }
+miden-private-transport-client = { features = ["idxdb", "testing", "web-tonic"], workspace = true }
 
 # Miden dependencies
 miden-client  = { workspace = true }

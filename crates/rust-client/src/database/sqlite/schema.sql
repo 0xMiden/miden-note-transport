@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS stored_notes (
     tag INTEGER NOT NULL,
     header BLOB NOT NULL,
     details BLOB NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
 
     PRIMARY KEY (note_id)
 ) STRICT;
