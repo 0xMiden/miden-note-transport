@@ -1,6 +1,6 @@
 use miden_client::utils::{Deserializable, Serializable};
 use miden_objects::utils::SliceReader;
-use miden_private_transport_client::types::{
+use miden_private_transport_client::test_utils::{
     mock_address as rc_mock_address,
     mock_note_p2id_with_addresses as rc_mock_note_p2id_with_addresses,
 };

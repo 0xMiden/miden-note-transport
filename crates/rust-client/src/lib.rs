@@ -22,7 +22,7 @@
 //! A local database keeps track of fetched notes and other client state.
 //!
 //! Communications with the Transport Layer Node are made through gRPC using `tonic`.
-//! A database implementation is provided (SQLite for a `std` compilation, and `IndexedDB` for
+//! A database implementation is provided (`SQLite` for a `std` compilation, and `IndexedDB` for
 //! WASM). Both the client-node gRPC communications and database implementations can be changed by
 //! employing other strucs implementing the [`TransportClient`] and
 //! [`DatabaseBackend`](`database::DatabaseBackend`) traits,
@@ -92,7 +92,7 @@ pub mod test_utils;
 /// Types used
 pub mod types;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use futures::Stream;
 use miden_objects::{
     address::Address,
@@ -113,21 +113,13 @@ pub use self::{
 #[cfg_attr(feature = "web-tonic", async_trait::async_trait(?Send))]
 pub trait TransportClient: Send + Sync {
     /// Send a note with optionally encrypted details
-    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<NoteId>;
+    async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<()>;
 
-    /// Fetch all notes timestamped after a given timestamp for a given tag
-    async fn fetch_notes(
-        &mut self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<Vec<NoteInfo>>;
+    /// Fetch all notes with cursor greater than the provided cursor for a given tag
+    async fn fetch_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Vec<NoteInfo>>;
 
     /// Stream notes for a given tag
-    async fn stream_notes(
-        &mut self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<Box<dyn NoteStream>>;
+    async fn stream_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Box<dyn NoteStream>>;
 }
 
 /// Stream trait for note streaming
@@ -140,8 +132,8 @@ pub struct TransportLayerClient {
     database: Database,
     /// Owned addresses
     addresses: Vec<Address>,
-    /// Last fetched timestamp
-    lts: BTreeMap<NoteTag, DateTime<Utc>>,
+    /// Last fetched cursor
+    lts: BTreeMap<NoteTag, u64>,
 }
 
 impl TransportLayerClient {
@@ -164,7 +156,7 @@ impl TransportLayerClient {
     ///
     /// If the note tag in the provided note is different than the recipient's [`Address`] note tag,
     /// the provided note' tag is updated.
-    pub async fn send_note(&mut self, note: Note, _address: &Address) -> Result<NoteId> {
+    pub async fn send_note(&mut self, note: Note, _address: &Address) -> Result<()> {
         let header = *note.header();
         let details: NoteDetails = note.into();
         let details_bytes = details.to_bytes();
@@ -173,11 +165,11 @@ impl TransportLayerClient {
 
     /// Fetch and decrypt notes for a tag
     pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<Note>> {
-        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
-        let infos = self.transport_client.fetch_notes(tag, ts).await?;
+        let cursor = self.lts.get(&tag).copied().unwrap_or(0);
+        let infos = self.transport_client.fetch_notes(tag, cursor).await?;
         let mut decrypted_notes = Vec::new();
 
-        let mut latest_ts = ts;
+        let mut latest_cursor = cursor;
         for info in infos {
             // Check if we've already fetched this note
             if !self.database.note_fetched(&info.header.id()).await? {
@@ -193,26 +185,30 @@ impl TransportLayerClient {
                 );
                 decrypted_notes.push(note);
 
+                // Use current time for created_at when storing notes
+                let created_at = Utc::now();
+
                 // Store the encrypted note
-                self.database.store_note(&info.header, &info.details, info.created_at).await?;
+                self.database.store_note(&info.header, &info.details, created_at).await?;
             }
 
-            // Update the latest received timestamp
-            if info.created_at > latest_ts {
-                latest_ts = info.created_at;
+            // Update the latest received cursor
+            let info_cursor = info.cursor;
+            if info_cursor > latest_cursor {
+                latest_cursor = info_cursor;
             }
         }
 
-        // Update the last timestamp to the most recent received timestamp
-        self.lts.insert(tag, latest_ts);
+        // Update the last cursor to the most recent received cursor
+        self.lts.insert(tag, latest_cursor);
 
         Ok(decrypted_notes)
     }
 
     /// Continuously fetch notes
     pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
-        let ts = self.lts.get(&tag).copied().unwrap_or(DateTime::from_timestamp(0, 0).unwrap());
-        self.transport_client.stream_notes(tag, ts).await
+        let cursor = self.lts.get(&tag).copied().unwrap_or(0);
+        self.transport_client.stream_notes(tag, cursor).await
     }
 
     /// Adds an owned address

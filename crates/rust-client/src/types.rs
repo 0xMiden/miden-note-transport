@@ -23,8 +23,8 @@ pub struct StoredNote {
     pub header: NoteHeader,
     /// Note details, can be encrypted
     pub details: Vec<u8>,
-    /// Note reference timestamp
-    pub created_at: DateTime<Utc>,
+    /// Note reference cursor
+    pub cursor: u64,
     /// Note fetched-at timestamp
     pub received_at: DateTime<Utc>,
 }
@@ -40,8 +40,8 @@ pub struct NoteInfo {
     pub header: NoteHeader,
     /// Note details, can be encrypted
     pub details: Vec<u8>,
-    /// Note reference timestamp
-    pub created_at: DateTime<Utc>,
+    /// Note reference cursor
+    pub cursor: u64,
 }
 
 /// Helper converter from [`prost_types::Timestamp`] to `DateTime<Utc>`

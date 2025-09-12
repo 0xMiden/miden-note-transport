@@ -19,11 +19,9 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
     let sent_tag = adr1.to_note_tag();
 
     let note = mock_note_p2id_with_addresses(&adr0, &adr1);
-    let header = *note.header();
+    let _header = *note.header();
 
-    let send_response = client0.send_note(note, &adr1).await?;
-    let id = send_response;
-    assert_eq!(id, header.id());
+    client0.send_note(note, &adr1).await?;
 
     // Fetch note back
     let fetch_response = client1.fetch_notes(sent_tag).await?;
@@ -53,18 +51,14 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
     let note0 = mock_note_p2id_with_tag_and_addresses(sent_tag0, &adr0, &adr2);
     let note1 = mock_note_p2id_with_tag_and_addresses(sent_tag1, &adr1, &adr2);
 
-    let header0 = *note0.header();
-    let header1 = *note1.header();
+    let _header0 = *note0.header();
+    let _header1 = *note1.header();
 
     // Send Note0
-    let send_response = client0.send_note(note0, &adr2).await?;
-    let id = send_response;
-    assert_eq!(id, header0.id());
+    client0.send_note(note0, &adr2).await?;
 
     // Send Note1
-    let send_response = client1.send_note(note1, &adr2).await?;
-    let id = send_response;
-    assert_eq!(id, header1.id());
+    client1.send_note(note1, &adr2).await?;
 
     // Fetch Tag0 (Note0)
     {

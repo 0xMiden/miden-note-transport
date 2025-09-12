@@ -15,11 +15,11 @@ message TransportNote {
     bytes details = 2;
 }
 
-message TransportNoteTimestamped {
+message TransportNotePg {
     // Note
     TransportNote note = 1;
-    // Transport Layer timestamp
-    google.protobuf.Timestamp timestamp = 2;
+    // Transport Layer pagination
+    fixed64 cursor = 2;
 }
 
 // API request for sending a note
@@ -28,30 +28,28 @@ message SendNoteRequest {
 }
 
 // API response for sending a note
-message SendNoteResponse {
-    string id = 1;  // NoteId as hex string
-}
+message SendNoteResponse { }
 
 // API request for fetching notes
 message FetchNotesRequest {
     fixed32 tag = 1;
-    google.protobuf.Timestamp timestamp = 2;
+    fixed64 cursor = 2;
 }
 
 // API response for fetching notes
 message FetchNotesResponse {
-    repeated TransportNoteTimestamped notes = 1;
+    repeated TransportNotePg notes = 1;
 }
 
 // API request for streaming notes
 message StreamNotesRequest {
     fixed32 tag = 1;
-    google.protobuf.Timestamp timestamp = 2;
+    fixed64 cursor = 2;
 }
 
 // API response for streaming notes updates
 message StreamNotesUpdate {
-    repeated TransportNoteTimestamped notes = 1;
+    repeated TransportNotePg notes = 1;
 }
 
 // Server statistics

@@ -116,6 +116,7 @@ export function getStoredNotesForTag(tag) {
     });
 }
 
+
 // Record that a note has been fetched
 export function recordFetchedNote(noteId, tag, fetchedAt) {
     return new Promise(async (resolve, reject) => {

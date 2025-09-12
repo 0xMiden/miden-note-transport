@@ -25,29 +25,22 @@ pub struct StoredNote {
     pub created_at: DateTime<Utc>,
 }
 
-impl TryFrom<StoredNote> for miden_private_transport_proto::TransportNoteTimestamped {
+impl TryFrom<StoredNote> for miden_private_transport_proto::TransportNotePg {
     type Error = anyhow::Error;
 
     fn try_from(snote: StoredNote) -> Result<Self, Self::Error> {
-        let nanos = snote.created_at.timestamp_subsec_nanos();
-        let nanos_i32 = nanos
-            .try_into()
-            .map_err(|e| anyhow::anyhow!("Timestamp nanoseconds too large: {e}"))?;
-
         let pnote = miden_private_transport_proto::TransportNote {
             header: snote.header.to_bytes(),
             details: snote.details,
         };
 
-        let ptimestamp = prost_types::Timestamp {
-            seconds: snote.created_at.timestamp(),
-            nanos: nanos_i32,
-        };
+        let cursor = snote
+            .created_at
+            .timestamp_micros()
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Timestamp too large for cursor"))?;
 
-        Ok(Self {
-            note: Some(pnote),
-            timestamp: Some(ptimestamp),
-        })
+        Ok(Self { note: Some(pnote), cursor })
     }
 }
 

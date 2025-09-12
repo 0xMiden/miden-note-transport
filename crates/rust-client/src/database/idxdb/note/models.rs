@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct StoredNoteIdxdbObject {
     pub header: Vec<u8>,
     pub details: Vec<u8>,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Serialize, Deserialize)]

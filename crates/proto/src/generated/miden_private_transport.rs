@@ -11,13 +11,13 @@ pub struct TransportNote {
     pub details: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TransportNoteTimestamped {
+pub struct TransportNotePg {
     /// Note
     #[prost(message, optional, tag = "1")]
     pub note: ::core::option::Option<TransportNote>,
-    /// Transport Layer timestamp
-    #[prost(message, optional, tag = "2")]
-    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Transport Layer pagination
+    #[prost(fixed64, tag = "2")]
+    pub cursor: u64,
 }
 /// API request for sending a note
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -26,39 +26,35 @@ pub struct SendNoteRequest {
     pub note: ::core::option::Option<TransportNote>,
 }
 /// API response for sending a note
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SendNoteResponse {
-    /// NoteId as hex string
-    #[prost(string, tag = "1")]
-    pub id: ::prost::alloc::string::String,
-}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SendNoteResponse {}
 /// API request for fetching notes
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct FetchNotesRequest {
     #[prost(fixed32, tag = "1")]
     pub tag: u32,
-    #[prost(message, optional, tag = "2")]
-    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(fixed64, tag = "2")]
+    pub cursor: u64,
 }
 /// API response for fetching notes
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FetchNotesResponse {
     #[prost(message, repeated, tag = "1")]
-    pub notes: ::prost::alloc::vec::Vec<TransportNoteTimestamped>,
+    pub notes: ::prost::alloc::vec::Vec<TransportNotePg>,
 }
 /// API request for streaming notes
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct StreamNotesRequest {
     #[prost(fixed32, tag = "1")]
     pub tag: u32,
-    #[prost(message, optional, tag = "2")]
-    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(fixed64, tag = "2")]
+    pub cursor: u64,
 }
 /// API response for streaming notes updates
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StreamNotesUpdate {
     #[prost(message, repeated, tag = "1")]
-    pub notes: ::prost::alloc::vec::Vec<TransportNoteTimestamped>,
+    pub notes: ::prost::alloc::vec::Vec<TransportNotePg>,
 }
 /// Server statistics
 #[derive(Clone, PartialEq, ::prost::Message)]

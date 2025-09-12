@@ -1,8 +1,6 @@
 mod maintenance;
 mod sqlite;
 
-use chrono::{DateTime, Utc};
-
 pub use self::maintenance::DatabaseMaintenance;
 use self::sqlite::SqliteDatabase;
 use crate::{
@@ -23,7 +21,7 @@ pub trait DatabaseBackend: Send + Sync {
     async fn store_note(&self, note: &StoredNote) -> Result<()>;
 
     /// Fetch notes by tag
-    async fn fetch_notes(&self, tag: NoteTag, timestamp: DateTime<Utc>) -> Result<Vec<StoredNote>>;
+    async fn fetch_notes(&self, tag: NoteTag, cursor: u64) -> Result<Vec<StoredNote>>;
 
     /// Get statistics about the database
     async fn get_stats(&self) -> Result<(u64, u64)>;
@@ -79,13 +77,9 @@ impl Database {
         self.backend.store_note(note).await
     }
 
-    /// Fetch notes by tag, optionally filtered by block number
-    pub async fn fetch_notes(
-        &self,
-        tag: NoteTag,
-        timestamp: DateTime<Utc>,
-    ) -> Result<Vec<StoredNote>> {
-        self.backend.fetch_notes(tag, timestamp).await
+    /// Fetch notes by tag with cursor-based pagination
+    pub async fn fetch_notes(&self, tag: NoteTag, cursor: u64) -> Result<Vec<StoredNote>> {
+        self.backend.fetch_notes(tag, cursor).await
     }
 
     /// Get statistics about the database
@@ -128,7 +122,10 @@ mod tests {
 
         db.store_note(&note).await.unwrap();
 
-        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), start).await.unwrap();
+        let fetched_notes = db
+            .fetch_notes(TAG_LOCAL_ANY.into(), start.timestamp_micros().try_into().unwrap())
+            .await
+            .unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
@@ -157,15 +154,21 @@ mod tests {
 
         db.store_note(&note).await.unwrap();
 
-        // Fetch notes with timestamp before the note was received - should return the note
-        let before_timestamp = received_time - chrono::Duration::seconds(1);
-        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), before_timestamp).await.unwrap();
+        // Fetch notes with cursor before the note was received - should return the note
+        let before_cursor = (received_time - chrono::Duration::seconds(1))
+            .timestamp_micros()
+            .try_into()
+            .unwrap();
+        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), before_cursor).await.unwrap();
         assert_eq!(fetched_notes.len(), 1);
         assert_eq!(fetched_notes[0].header.id(), note.header.id());
 
-        // Fetch notes with timestamp after the note was received - should return empty
-        let after_timestamp = received_time + chrono::Duration::seconds(1);
-        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), after_timestamp).await.unwrap();
+        // Fetch notes with cursor after the note was received - should return empty
+        let after_cursor = (received_time + chrono::Duration::seconds(1))
+            .timestamp_micros()
+            .try_into()
+            .unwrap();
+        let fetched_notes = db.fetch_notes(TAG_LOCAL_ANY.into(), after_cursor).await.unwrap();
         assert_eq!(fetched_notes.len(), 0);
     }
 }

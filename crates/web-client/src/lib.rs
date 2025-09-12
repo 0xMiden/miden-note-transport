@@ -51,12 +51,14 @@ impl TransportLayerWebClient {
 
         let native_note: miden_objects::note::Note = note.into();
         let native_address: miden_objects::address::Address = address.into();
+        let note_id = native_note.id();
 
-        let note_id = inner
+        inner
             .send_note(native_note, &native_address)
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to send note: {:?}", e)))?;
 
+        // Return the note ID from the note that was sent
         Ok(note_id.into())
     }
 

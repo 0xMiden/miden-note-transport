@@ -14,7 +14,7 @@ extern "C" {
         note_id: Vec<u8>,
         header: Vec<u8>,
         details: Vec<u8>,
-        created_at: String,
+        created_at: i64,
     ) -> js_sys::Promise;
 
     #[wasm_bindgen(js_name = getStoredNote)]
