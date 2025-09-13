@@ -35,10 +35,6 @@ tonic-web    = { workspace = true }
 tower        = { workspace = true }
 tower-http   = { features = ["cors"], workspace = true }
 
-# Serialization
-serde      = { workspace = true }
-serde_json = { workspace = true }
-
 # Protobuf
 prost-types = { workspace = true }
 
