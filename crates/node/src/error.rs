@@ -1,11 +1,13 @@
 use thiserror::Error;
 
+use crate::database::DatabaseError;
+
 /// Main error type
 #[derive(Error, Debug)]
 pub enum Error {
-    /// Database error ([`sqlx::Error`])
+    /// Database error
     #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
+    Database(#[from] DatabaseError),
 
     /// IO error
     #[error("IO error: {0}")]
