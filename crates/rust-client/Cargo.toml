@@ -74,8 +74,8 @@ serde_json = { workspace = true }
 prost-types = { workspace = true }
 
 # Database
-deadpool           = { default-features = false, features = ["managed", "rt_tokio_1"], optional = true, version = "0.12" }
-deadpool-sync      = { optional = true, version = "0.1" }
+deadpool           = { optional = true, workspace = true }
+deadpool-sync      = { optional = true, workspace = true }
 hex                = { optional = true, workspace = true }
 rusqlite           = { features = ["array", "bundled", "vtab"], optional = true, version = "0.35" }
 rusqlite_migration = { optional = true, version = "2.1" }

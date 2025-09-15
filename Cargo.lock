@@ -1676,7 +1676,6 @@ dependencies = [
  "chrono",
  "deadpool",
  "deadpool-diesel",
- "deadpool-sync",
  "diesel",
  "diesel_migrations",
  "miden-objects",
