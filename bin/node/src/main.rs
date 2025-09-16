@@ -20,7 +20,7 @@ struct Args {
     port: u16,
 
     /// Database URL
-    #[arg(long, default_value = "sqlite::memory:")]
+    #[arg(long, default_value = ":memory:")]
     database_url: String,
 
     /// Maximum note size in bytes

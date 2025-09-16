@@ -39,7 +39,11 @@ tower-http   = { features = ["cors"], workspace = true }
 prost-types = { workspace = true }
 
 # Database
-sqlx = { features = ["runtime-tokio-rustls", "sqlite"], version = "0.8.6" }
+deadpool          = { workspace = true }
+deadpool-diesel   = { features = ["sqlite"], version = "0.6" }
+deadpool-sync     = { workspace = true }
+diesel            = { features = ["numeric", "sqlite"], version = "2.2" }
+diesel_migrations = { features = ["sqlite"], version = "2.2" }
 
 # Logging
 opentelemetry         = { workspace = true }

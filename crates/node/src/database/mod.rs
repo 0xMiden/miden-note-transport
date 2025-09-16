@@ -1,10 +1,10 @@
+mod error;
 mod maintenance;
 mod sqlite;
 
-pub use self::maintenance::DatabaseMaintenance;
 use self::sqlite::SqliteDatabase;
+pub use self::{error::DatabaseError, maintenance::DatabaseMaintenance};
 use crate::{
-    Result,
     metrics::MetricsDatabase,
     types::{NoteId, NoteTag, StoredNote},
 };
@@ -13,24 +13,31 @@ use crate::{
 #[async_trait::async_trait]
 pub trait DatabaseBackend: Send + Sync {
     /// Connect to the database
-    async fn connect(config: DatabaseConfig, metrics: MetricsDatabase) -> Result<Self>
+    async fn connect(
+        config: DatabaseConfig,
+        metrics: MetricsDatabase,
+    ) -> Result<Self, DatabaseError>
     where
         Self: Sized;
 
     /// Store a new note
-    async fn store_note(&self, note: &StoredNote) -> Result<()>;
+    async fn store_note(&self, note: &StoredNote) -> Result<(), DatabaseError>;
 
     /// Fetch notes by tag
-    async fn fetch_notes(&self, tag: NoteTag, cursor: u64) -> Result<Vec<StoredNote>>;
+    async fn fetch_notes(
+        &self,
+        tag: NoteTag,
+        cursor: u64,
+    ) -> Result<Vec<StoredNote>, DatabaseError>;
 
     /// Get statistics about the database
-    async fn get_stats(&self) -> Result<(u64, u64)>;
+    async fn get_stats(&self) -> Result<(u64, u64), DatabaseError>;
 
     /// Clean up old notes based on retention policy
-    async fn cleanup_old_notes(&self, retention_days: u32) -> Result<u64>;
+    async fn cleanup_old_notes(&self, retention_days: u32) -> Result<u64, DatabaseError>;
 
     /// Check if a note exists
-    async fn note_exists(&self, note_id: NoteId) -> Result<bool>;
+    async fn note_exists(&self, note_id: NoteId) -> Result<bool, DatabaseError>;
 }
 
 /// Database manager for the transport layer
@@ -56,7 +63,7 @@ pub struct DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "sqlite::memory:".to_string(),
+            url: ":memory:".to_string(),
             retention_days: 30,
             rate_limit_per_minute: 100,
             request_timeout_seconds: 10,
@@ -67,33 +74,41 @@ impl Default for DatabaseConfig {
 
 impl Database {
     /// Connect to a database (with `SQLite` backend)
-    pub async fn connect(config: DatabaseConfig, metrics: MetricsDatabase) -> Result<Self> {
+    pub async fn connect(
+        config: DatabaseConfig,
+        metrics: MetricsDatabase,
+    ) -> Result<Self, DatabaseError> {
         let backend = SqliteDatabase::connect(config, metrics).await?;
         Ok(Self { backend: Box::new(backend) })
     }
 
     /// Store a new note
-    pub async fn store_note(&self, note: &StoredNote) -> Result<()> {
-        self.backend.store_note(note).await
+    pub async fn store_note(&self, note: &StoredNote) -> Result<(), DatabaseError> {
+        self.backend.store_note(note).await?;
+        Ok(())
     }
 
     /// Fetch notes by tag with cursor-based pagination
-    pub async fn fetch_notes(&self, tag: NoteTag, cursor: u64) -> Result<Vec<StoredNote>> {
+    pub async fn fetch_notes(
+        &self,
+        tag: NoteTag,
+        cursor: u64,
+    ) -> Result<Vec<StoredNote>, DatabaseError> {
         self.backend.fetch_notes(tag, cursor).await
     }
 
     /// Get statistics about the database
-    pub async fn get_stats(&self) -> Result<(u64, u64)> {
+    pub async fn get_stats(&self) -> Result<(u64, u64), DatabaseError> {
         self.backend.get_stats().await
     }
 
     /// Clean up old notes based on retention policy
-    pub async fn cleanup_old_notes(&self, retention_days: u32) -> Result<u64> {
+    pub async fn cleanup_old_notes(&self, retention_days: u32) -> Result<u64, DatabaseError> {
         self.backend.cleanup_old_notes(retention_days).await
     }
 
     /// Check if a note exists
-    pub async fn note_exists(&self, note_id: NoteId) -> Result<bool> {
+    pub async fn note_exists(&self, note_id: NoteId) -> Result<bool, DatabaseError> {
         self.backend.note_exists(note_id).await
     }
 }
