@@ -1,5 +1,4 @@
 use chrono::Utc;
-use deadpool_diesel::sqlite::{Manager, Pool};
 use diesel::prelude::*;
 
 use crate::{
@@ -8,52 +7,57 @@ use crate::{
     types::{NoteId, NoteTag, StoredNote},
 };
 
+mod connection_manager;
 mod migrations;
 mod models;
 mod schema;
 
+use connection_manager::ConnectionManager;
 use models::{NewNote, Note};
 
 /// `SQLite` implementation of the database backend
 pub struct SqliteDatabase {
-    pool: Pool,
+    pool: deadpool_diesel::Pool<ConnectionManager, deadpool::managed::Object<ConnectionManager>>,
     metrics: MetricsDatabase,
 }
 
 impl SqliteDatabase {
-    /// Get a connection from the pool
-    async fn get_connection(
-        &self,
-    ) -> std::result::Result<deadpool::managed::Object<Manager>, DatabaseError> {
-        self.pool
+    /// Execute a query within a transaction
+    async fn transact<R, Q, M>(&self, msg: M, query: Q) -> Result<R, DatabaseError>
+    where
+        Q: Send + FnOnce(&mut SqliteConnection) -> Result<R, DatabaseError> + 'static,
+        R: Send + 'static,
+        M: Send + ToString,
+    {
+        let conn = self
+            .pool
             .get()
             .await
-            .map_err(|e| DatabaseError::Connection(format!("Failed to get connection: {e}")))
+            .map_err(|e| DatabaseError::Connection(format!("Failed to get connection: {e}")))?;
+
+        conn.interact(|conn| conn.transaction(|conn| query(conn)))
+            .await
+            .map_err(|err| {
+                DatabaseError::QueryExecution(format!("Failed to {}: {}", msg.to_string(), err))
+            })?
     }
 
-    /// Execute a query
-    async fn execute_query<F, R>(
-        &self,
-        operation: &str,
-        query: F,
-    ) -> std::result::Result<R, DatabaseError>
+    /// Execute a query without a transaction
+    async fn query<R, Q, M>(&self, msg: M, query: Q) -> Result<R, DatabaseError>
     where
-        F: FnOnce(&mut SqliteConnection) -> std::result::Result<R, diesel::result::Error>
-            + Send
-            + 'static,
+        Q: Send + FnOnce(&mut SqliteConnection) -> Result<R, DatabaseError> + 'static,
         R: Send + 'static,
+        M: Send + ToString,
     {
-        let conn = self.get_connection().await?;
-
-        let query_with_db_error =
-            move |conn: &mut SqliteConnection| -> std::result::Result<R, DatabaseError> {
-                query(conn)
-                    .map_err(|e| DatabaseError::QueryExecution(format!("Database error: {e}")))
-            };
-
-        conn.interact(query_with_db_error)
+        let conn = self
+            .pool
+            .get()
             .await
-            .map_err(|e| DatabaseError::QueryExecution(format!("Failed to {operation}: {e}")))?
+            .map_err(|e| DatabaseError::Connection(format!("Failed to get connection: {e}")))?;
+
+        conn.interact(move |conn| query(conn)).await.map_err(|err| {
+            DatabaseError::QueryExecution(format!("Failed to {}: {}", msg.to_string(), err))
+        })?
     }
 }
 
@@ -69,21 +73,11 @@ impl DatabaseBackend for SqliteDatabase {
             })?;
         }
 
-        let manager = Manager::new(config.url, deadpool_diesel::Runtime::Tokio1);
-        let pool = Pool::builder(manager)
+        let manager = ConnectionManager::new(&config.url);
+        let pool = deadpool_diesel::Pool::builder(manager)
+            .max_size(16)
             .build()
             .map_err(|e| DatabaseError::Pool(format!("Failed to create connection pool: {e}")))?;
-
-        // Apply migrations
-        let conn = pool
-            .get()
-            .await
-            .map_err(|e| DatabaseError::Connection(format!("Failed to get connection: {e}")))?;
-        tracing::debug!("Applying migrations to database");
-        conn.interact(migrations::apply_migrations)
-            .await
-            .map_err(|e| DatabaseError::Migration(format!("Failed to apply migrations: {e}")))?
-            .map_err(|e| DatabaseError::Migration(format!("Migration error: {e}")))?;
 
         Ok(Self { pool, metrics })
     }
@@ -93,14 +87,13 @@ impl DatabaseBackend for SqliteDatabase {
         let timer = self.metrics.db_store_note();
 
         let new_note = NewNote::from(note);
-        self.execute_query("store note", move |conn| {
+        self.transact("store note", move |conn| {
             diesel::insert_into(schema::notes::table).values(&new_note).execute(conn)?;
             Ok(())
         })
         .await?;
 
         timer.finish("ok");
-
         Ok(())
     }
 
@@ -118,7 +111,7 @@ impl DatabaseBackend for SqliteDatabase {
 
         let tag_value = i64::from(tag.as_u32());
         let notes: Vec<Note> = self
-            .execute_query("fetch notes", move |conn| {
+            .transact("fetch notes", move |conn| {
                 use schema::notes::dsl::{created_at, notes, tag};
                 let fetched_notes = notes
                     .filter(tag.eq(tag_value))
@@ -144,7 +137,7 @@ impl DatabaseBackend for SqliteDatabase {
 
     async fn get_stats(&self) -> Result<(u64, u64), DatabaseError> {
         let (total_notes, total_tags): (i64, i64) = self
-            .execute_query("get stats", |conn| {
+            .query("get stats", |conn| {
                 #[allow(deprecated)]
                 use diesel::dsl::count_distinct;
                 use schema::notes::dsl::{notes, tag};
@@ -165,7 +158,7 @@ impl DatabaseBackend for SqliteDatabase {
         let cutoff_timestamp = cutoff_date.timestamp_micros();
 
         let deleted_count: i64 = self
-            .execute_query("cleanup old notes", move |conn| {
+            .transact("cleanup old notes", move |conn| {
                 use schema::notes::dsl::{created_at, notes};
                 let count =
                     diesel::delete(notes.filter(created_at.lt(cutoff_timestamp))).execute(conn)?;
@@ -178,7 +171,7 @@ impl DatabaseBackend for SqliteDatabase {
 
     async fn note_exists(&self, note_id: NoteId) -> Result<bool, DatabaseError> {
         let count: i64 = self
-            .execute_query("check note existence", move |conn| {
+            .query("check note existence", move |conn| {
                 use schema::notes::dsl::{id, notes};
                 let count =
                     notes.filter(id.eq(&note_id.as_bytes()[..])).count().get_result(conn)?;
