@@ -32,7 +32,7 @@ tokio        = { workspace = true }
 tonic        = { default-features = true, workspace = true }
 tonic-health = { workspace = true }
 tonic-web    = { workspace = true }
-tower        = { workspace = true }
+tower        = { features = ["timeout"], workspace = true }
 tower-http   = { features = ["cors"], workspace = true }
 
 # Protobuf
