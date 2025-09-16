@@ -50,14 +50,8 @@ pub struct Database {
 pub struct DatabaseConfig {
     /// Database URL
     pub url: String,
-    /// Maximum size of a stored note
-    pub max_note_size: usize,
     /// Retention period in days
     pub retention_days: u32,
-    /// Rate limit per minute
-    pub rate_limit_per_minute: u32,
-    /// Request timeout in seconds
-    pub request_timeout_seconds: u64,
 }
 
 impl Default for DatabaseConfig {
@@ -65,9 +59,6 @@ impl Default for DatabaseConfig {
         Self {
             url: ":memory:".to_string(),
             retention_days: 30,
-            rate_limit_per_minute: 100,
-            request_timeout_seconds: 10,
-            max_note_size: 1024 * 1024,
         }
     }
 }

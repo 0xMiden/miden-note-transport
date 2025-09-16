@@ -23,21 +23,21 @@ struct Args {
     #[arg(long, default_value = ":memory:")]
     database_url: String,
 
-    /// Maximum note size in bytes
-    #[arg(long, default_value = "1048576")]
-    max_note_size: usize,
-
     /// Retention period in days
     #[arg(long, default_value = "30")]
     retention_days: u32,
 
-    /// Rate limit per minute
-    #[arg(long, default_value = "100")]
-    rate_limit_per_minute: u32,
+    /// Maximum note size in bytes
+    #[arg(long, default_value = "512000")]
+    max_note_size: usize,
 
-    /// Request timeout in seconds
-    #[arg(long, default_value = "30")]
-    request_timeout_seconds: u64,
+    /// Maximum number of concurrent connections
+    #[arg(long, default_value = "4096")]
+    max_connections: usize,
+
+    /// Connection timeout in seconds
+    #[arg(long, default_value = "4")]
+    request_timeout: usize,
 }
 
 #[tokio::main]
@@ -55,8 +55,6 @@ async fn main() -> Result<()> {
     info!("Database: {}", args.database_url);
     info!("Max note size: {} bytes", args.max_note_size);
     info!("Retention days: {}", args.retention_days);
-    info!("Rate limit: {} requests/minute", args.rate_limit_per_minute);
-    info!("Request timeout: {} seconds", args.request_timeout_seconds);
     info!(
         "Telemetry: OpenTelemetry={}, JSON={}",
         tracing_cfg.otel.is_enabled(),
@@ -69,13 +67,12 @@ async fn main() -> Result<()> {
             host: args.host,
             port: args.port,
             max_note_size: args.max_note_size,
+            max_connections: args.max_connections,
+            request_timeout: args.request_timeout,
         },
         database: DatabaseConfig {
             url: args.database_url,
             retention_days: args.retention_days,
-            rate_limit_per_minute: args.rate_limit_per_minute,
-            request_timeout_seconds: args.request_timeout_seconds,
-            max_note_size: args.max_note_size,
         },
     };
 
