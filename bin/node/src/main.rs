@@ -16,7 +16,7 @@ struct Args {
     host: String,
 
     /// Port to bind to
-    #[arg(long, default_value = "8080")]
+    #[arg(long, default_value = "57292")]
     port: u16,
 
     /// Database URL

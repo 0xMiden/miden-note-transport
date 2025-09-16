@@ -13,10 +13,6 @@ pub enum Error {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// Serialization error ([`serde_json::Error`])
-    #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
-
     /// gRPC error-status
     #[error("gRPC error: {0}")]
     GrpcStatus(Box<tonic::Status>),

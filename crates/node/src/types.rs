@@ -6,16 +6,11 @@ pub use miden_objects::{
     block::BlockNumber,
     note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
 };
-use serde::{Deserialize, Serialize};
 
 /// A note stored in the database
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct StoredNote {
     /// Note header
-    #[serde(
-        serialize_with = "serialize_note_header",
-        deserialize_with = "deserialize_note_header"
-    )]
     pub header: NoteHeader,
     /// Note details
     ///
@@ -55,24 +50,4 @@ pub fn proto_timestamp_to_datetime(pts: prost_types::Timestamp) -> anyhow::Resul
     .ok_or_else(|| anyhow::anyhow!("Invalid timestamp".to_string()))?;
 
     Ok(dts)
-}
-
-fn serialize_note_header<S>(note_header: &NoteHeader, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    use miden_objects::utils::Serializable;
-    serializer.serialize_bytes(&note_header.to_bytes())
-}
-
-fn deserialize_note_header<'de, D>(deserializer: D) -> Result<NoteHeader, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use miden_objects::utils::Deserializable;
-    use serde::de::Error;
-    let bytes = Vec::<u8>::deserialize(deserializer)?;
-    NoteHeader::read_from_bytes(&bytes).map_err(|e| {
-        D::Error::custom(format!("Failed to deserialize NoteHeader from bytes: {e:?}"))
-    })
 }

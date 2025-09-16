@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Transport Layer Tests", () => {
-  const SERVER_URL = 'http://localhost:8080';
+  const SERVER_URL = 'http://localhost:57292';
 
   test("load modules", async ({ page }) => {
     page.on('console', msg => console.log('BROWSER:', msg.text()));

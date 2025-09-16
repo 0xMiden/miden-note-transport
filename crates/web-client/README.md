@@ -71,7 +71,7 @@ import {
 const client = new TransportLayerWebClient();
 
 // Connect to the transport server
-await client.connect('http://localhost:8080');
+await client.connect('http://localhost:57292');
 ```
 
 ### Sending Notes

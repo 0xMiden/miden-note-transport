@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: bin/node/docker/Dockerfile
     ports:
-      - "8080:8080"  # gRPC
+      - "57292:57292"  # gRPC
       - "9091:9090"  # Health checks
     environment:
       - OTEL_ENABLED=true

@@ -41,6 +41,6 @@ LABEL org.opencontainers.image.created=$CREATED \
     org.opencontainers.image.revision=$COMMIT
 
 # Expose port
-EXPOSE 8080
+EXPOSE 57292
 
 CMD ["miden-private-transport-node-bin", "--host", "0.0.0.0"]

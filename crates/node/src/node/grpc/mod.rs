@@ -48,7 +48,7 @@ impl Default for GrpcServerConfig {
     fn default() -> Self {
         Self {
             host: "127.0.0.1".to_string(),
-            port: 8080,
+            port: 57292,
             max_note_size: 1024 * 1024,
         }
     }
