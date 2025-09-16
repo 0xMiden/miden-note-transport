@@ -1687,8 +1687,6 @@ dependencies = [
  "opentelemetry_sdk",
  "prost-types",
  "rand",
- "serde",
- "serde_json",
  "serial_test",
  "thiserror 2.0.16",
  "tokio",
