@@ -25,7 +25,7 @@ use tracing::info;
 )]
 struct Args {
     /// Server endpoint
-    #[arg(long, default_value = "http://localhost:8080")]
+    #[arg(long, default_value = "http://localhost:57292")]
     endpoint: String,
 
     /// Request timeout (ms)

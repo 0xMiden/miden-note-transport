@@ -43,10 +43,10 @@ jobs:
 
       - name: Start transport node server
         run: |
-          cargo run --release --bin miden-private-transport-node-bin -- --port 8080 --host 127.0.0.1 &
+          cargo run --release --bin miden-private-transport-node-bin -- --port 57292 --host 127.0.0.1 &
           echo "Waiting for server to start..."
           sleep 10
-          echo "Server should be running on port 8080"
+          echo "Server should be running on port 57292"
 
       - name: Install dependencies
         run: |
