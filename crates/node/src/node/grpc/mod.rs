@@ -1,6 +1,6 @@
 mod streaming;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use chrono::Utc;
 use miden_objects::utils::Deserializable;
@@ -13,7 +13,7 @@ use rand::Rng;
 use tokio::sync::mpsc;
 use tonic::Status;
 use tonic_web::GrpcWebLayer;
-use tower::ServiceBuilder;
+use tower::{limit::GlobalConcurrencyLimitLayer, timeout::TimeoutLayer};
 use tower_http::cors::{Any, CorsLayer};
 
 use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
@@ -36,6 +36,10 @@ pub struct GrpcServerConfig {
     pub port: u16,
     /// Maximum note size to be stored
     pub max_note_size: usize,
+    /// Maximum number of concurrent connections
+    pub max_connections: usize,
+    /// Connection timeout in seconds
+    pub request_timeout: usize,
 }
 
 /// Streaming task interface context
@@ -49,7 +53,9 @@ impl Default for GrpcServerConfig {
         Self {
             host: "127.0.0.1".to_string(),
             port: 57292,
-            max_note_size: 1024 * 1024,
+            max_note_size: 512_000,
+            max_connections: 4096,
+            request_timeout: 4,
         }
     }
 }
@@ -75,22 +81,16 @@ impl GrpcServer {
             .parse::<SocketAddr>()
             .map_err(|e| crate::Error::Internal(format!("Invalid address: {e}")))?;
 
-        // Build the server with gRPC-Web support and CORS
         let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
 
         tonic::transport::Server::builder()
-            .accept_http1(true) // Enable HTTP/1.1 for gRPC-Web
-            .layer(cors) // Add CORS layer at server level
-            .add_service(
-                ServiceBuilder::new()
-                    .layer(GrpcWebLayer::new()) // Add gRPC-Web layer
-                    .service(health_svc)
-            )
-            .add_service(
-                ServiceBuilder::new()
-                    .layer(GrpcWebLayer::new()) // Add gRPC-Web layer
-                    .service(self.into_service())
-            )
+            .accept_http1(true)
+            .layer(cors)
+            .layer(GrpcWebLayer::new())
+            .layer(GlobalConcurrencyLimitLayer::new(self.config.max_connections))
+            .layer(TimeoutLayer::new(Duration::from_secs(self.config.request_timeout as u64)))
+            .add_service(health_svc)
+            .add_service(self.into_service())
             .serve(addr)
             .await
             .map_err(|e| crate::Error::Internal(format!("Server error: {e}")))
