@@ -46,7 +46,7 @@
 //!     // Initialize the client
 //!     let db_config = DatabaseConfig::default();
 //!     let db = Database::new_sqlite(db_config).await?;
-//!     let grpc = GrpcClient::connect("http://localhost:8080".to_string(), 1000).await?;
+//!     let grpc = GrpcClient::connect("http://localhost:57292".to_string(), 1000).await?;
 //!     let mut client = TransportLayerClient::new(Box::new(grpc), db, vec![]);
 //!
 //!     // Random data for this example
