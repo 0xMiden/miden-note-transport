@@ -172,8 +172,8 @@
     <div class="container">
         <h2>📥 Fetch Notes</h2>
         <div class="form-group">
-            <label for="noteTag">Note Tag (integer):</label>
-            <input type="number" id="noteTag" placeholder="Enter note tag as integer (e.g., 123)" min="0">
+            <label for="noteTags">Note Tags (comma-separated integers):</label>
+            <input type="text" id="noteTags" placeholder="Enter note tags as comma-separated integers (e.g., 123 or 123,456,789)">
         </div>
         <button id="fetchNotesBtn" onclick="fetchNotes()" disabled>Fetch Notes</button>
         <div id="fetchStatus" class="status info" style="display: none;"></div>
@@ -338,34 +338,38 @@
                 return;
             }
 
-            const noteTagValue = document.getElementById('noteTag').value;
+            const noteTagsValue = document.getElementById('noteTags').value;
 
-            if (!noteTagValue) {
-                showStatus('fetchStatus', 'Please enter a note tag', 'error');
+            if (!noteTagsValue) {
+                showStatus('fetchStatus', 'Please enter note tags', 'error');
                 return;
             }
 
             try {
-                showStatus('fetchStatus', 'Parsing tag...', 'info');
+                showStatus('fetchStatus', 'Parsing tags...', 'info');
                 
-                // Parse the integer tag
-                const tagInt = parseInt(noteTagValue, 10);
-                if (isNaN(tagInt)) {
-                    throw new Error('Note tag must be a valid integer');
-                }
+                // Parse the comma-separated integer tags
+                const tagStrings = noteTagsValue.split(',').map(s => s.trim());
+                const tagInts = tagStrings.map(s => {
+                    const parsed = parseInt(s, 10);
+                    if (isNaN(parsed)) {
+                        throw new Error(`Invalid tag: "${s}" must be a valid integer`);
+                    }
+                    return parsed;
+                });
                 
-                const noteTag = create_note_tag_from_int(tagInt);
+                const noteTags = tagInts.map(tagInt => create_note_tag_from_int(tagInt));
                 
                 showStatus('fetchStatus', 'Fetching notes...', 'info');
-                const notes = await client.fetchNotes(noteTag);
+                const notes = await client.fetchNotes(noteTags);
                 
                 showStatus('fetchStatus', `✅ Fetched ${notes.length} notes successfully!`, 'success');
                 
                 // Display meaningful note information
-                let output = `Found ${notes.length} notes with tag ${tagInt}.\n\n`;
+                let output = `Found ${notes.length} notes with tags [${tagInts.join(', ')}].\n\n`;
                 
                 if (notes.length === 0) {
-                    output += 'No notes found with this tag.';
+                    output += 'No notes found with these tags.';
                 } else {
                     for (let i = 0; i < notes.length; i++) {
                         const note = notes[i];
@@ -391,6 +395,7 @@
                 showOutput('fetchOutput', `Error details: ${error.stack}`);
             }
         };
+
 
         // Initialize UI
         updateConnectionUI();

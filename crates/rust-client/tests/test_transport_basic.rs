@@ -24,7 +24,7 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
     client0.send_note(note, &adr1).await?;
 
     // Fetch note back
-    let fetch_response = client1.fetch_notes(sent_tag).await?;
+    let fetch_response = client1.fetch_notes(&[sent_tag]).await?;
     let notes = fetch_response;
     assert_eq!(notes.len(), 1);
     let header = notes[0].header();
@@ -38,7 +38,7 @@ async fn test_transport_note() -> std::result::Result<(), Box<dyn std::error::Er
 
 #[tokio::test]
 async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let port = 9629;
+    let port = 9628;
     let handle = spawn_test_server(port).await;
 
     let (mut client0, adr0) = test_client(port).await;
@@ -62,7 +62,7 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
 
     // Fetch Tag0 (Note0)
     {
-        let fetch_response = client2.fetch_notes(sent_tag0).await?;
+        let fetch_response = client2.fetch_notes(&[sent_tag0]).await?;
         let fetched_notes = fetch_response;
         assert_eq!(fetched_notes.len(), 1);
         let header = fetched_notes[0].header();
@@ -72,13 +72,44 @@ async fn test_transport_different_tags() -> std::result::Result<(), Box<dyn std:
 
     // Fetch Tag1 (Note1)
     {
-        let fetch_response = client2.fetch_notes(sent_tag1).await?;
+        let fetch_response = client2.fetch_notes(&[sent_tag1]).await?;
         let fetched_notes = fetch_response;
         assert_eq!(fetched_notes.len(), 1);
         let header = fetched_notes[0].header();
         let tag = header.metadata().tag();
         assert_eq!(tag, sent_tag1);
     }
+
+    handle.abort();
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_transport_fetch_multiple_tags() -> std::result::Result<(), Box<dyn std::error::Error>>
+{
+    let port = 9629;
+    let handle = spawn_test_server(port).await;
+
+    let (mut client0, adr0) = test_client(port).await;
+    let (mut client1, adr1) = test_client(port).await;
+
+    let sent_tag0 = TAG_LOCALANY.into();
+    let sent_tag1 = (TAG_LOCALANY + 1).into();
+
+    let note0 = mock_note_p2id_with_tag_and_addresses(sent_tag0, &adr0, &adr1);
+    let note1 = mock_note_p2id_with_tag_and_addresses(sent_tag1, &adr0, &adr1);
+
+    let _header0 = *note0.header();
+    let _header1 = *note1.header();
+
+    // Send notes
+    client0.send_note(note0, &adr1).await?;
+    client0.send_note(note1, &adr1).await?;
+
+    // Fetch tag0, tag1
+    let fetch_response = client1.fetch_notes(&[sent_tag0, sent_tag1]).await?;
+    let fetched_notes = fetch_response;
+    assert_eq!(fetched_notes.len(), 2);
 
     handle.abort();
     Ok(())
