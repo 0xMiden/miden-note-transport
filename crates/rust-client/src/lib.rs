@@ -59,7 +59,7 @@
 //!
 //!     // Fetch notes (needs a running server)
 //!     let tag = recipient.to_note_tag();
-//!     let notes = client.fetch_notes(tag).await?;
+//!     let notes = client.fetch_notes(&[tag]).await?;
 //!
 //!     Ok(())
 //! }
@@ -70,7 +70,7 @@
 
 #[macro_use]
 extern crate alloc;
-use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -115,8 +115,8 @@ pub trait TransportClient: Send + Sync {
     /// Send a note with optionally encrypted details
     async fn send_note(&mut self, header: NoteHeader, details: Vec<u8>) -> Result<()>;
 
-    /// Fetch all notes with cursor greater than the provided cursor for a given tag
-    async fn fetch_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Vec<NoteInfo>>;
+    /// Fetch all notes with cursor greater than the provided one for given tags
+    async fn fetch_notes(&mut self, tags: &[NoteTag], cursor: u64) -> Result<Vec<NoteInfo>>;
 
     /// Stream notes for a given tag
     async fn stream_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Box<dyn NoteStream>>;
@@ -133,7 +133,7 @@ pub struct TransportLayerClient {
     /// Owned addresses
     addresses: Vec<Address>,
     /// Last fetched cursor
-    lts: BTreeMap<NoteTag, u64>,
+    cursor: u64,
 }
 
 impl TransportLayerClient {
@@ -143,12 +143,11 @@ impl TransportLayerClient {
         database: Database,
         addresses: Vec<Address>,
     ) -> Self {
-        let lts = BTreeMap::new();
         Self {
             transport_client,
             database,
             addresses,
-            lts,
+            cursor: 0,
         }
     }
 
@@ -163,18 +162,19 @@ impl TransportLayerClient {
         self.transport_client.send_note(header, details_bytes).await
     }
 
-    /// Fetch and decrypt notes for a tag
-    pub async fn fetch_notes(&mut self, tag: NoteTag) -> Result<Vec<Note>> {
-        let cursor = self.lts.get(&tag).copied().unwrap_or(0);
-        let infos = self.transport_client.fetch_notes(tag, cursor).await?;
+    /// Fetch and decrypt notes for tags
+    pub async fn fetch_notes(&mut self, tags: &[NoteTag]) -> Result<Vec<Note>> {
+        let infos = self.transport_client.fetch_notes(tags, self.cursor).await?;
         let mut decrypted_notes = Vec::new();
+        let mut latest_cursor = self.cursor;
 
-        let mut latest_cursor = cursor;
         for info in infos {
             // Check if we've already fetched this note
             if !self.database.note_fetched(&info.header.id()).await? {
-                // Mark note as fetched
-                self.database.record_fetched_note(&info.header.id(), tag).await?;
+                // Mark note as fetched for each tag
+                for tag in tags {
+                    self.database.record_fetched_note(&info.header.id(), *tag).await?;
+                }
 
                 let details = NoteDetails::read_from_bytes(&info.details)
                     .map_err(|e| Error::Internal(format!("Failed to deserialize details: {e}")))?;
@@ -199,16 +199,15 @@ impl TransportLayerClient {
             }
         }
 
-        // Update the last cursor to the most recent received cursor
-        self.lts.insert(tag, latest_cursor);
+        // Update the single cursor to the most recent received cursor
+        self.cursor = latest_cursor;
 
         Ok(decrypted_notes)
     }
 
     /// Continuously fetch notes
     pub async fn stream_notes(&mut self, tag: NoteTag) -> Result<Box<dyn NoteStream>> {
-        let cursor = self.lts.get(&tag).copied().unwrap_or(0);
-        self.transport_client.stream_notes(tag, cursor).await
+        self.transport_client.stream_notes(tag, self.cursor).await
     }
 
     /// Adds an owned address

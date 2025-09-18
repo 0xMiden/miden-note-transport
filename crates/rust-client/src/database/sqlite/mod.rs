@@ -73,7 +73,8 @@ impl SqliteDatabase {
     }
 }
 
-#[async_trait::async_trait]
+#[cfg_attr(not(feature = "idxdb"), async_trait::async_trait)]
+#[cfg_attr(feature = "idxdb", async_trait::async_trait(?Send))]
 impl DatabaseBackend for SqliteDatabase {
     async fn store_note(
         &self,

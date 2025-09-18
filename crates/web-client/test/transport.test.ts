@@ -93,9 +93,9 @@ test.describe("Transport Layer Tests", () => {
         // Send note first
         await client.sendNote(note, target);
         
-        // Fetch notes by target's tag
+        // Fetch notes by target's tag (single tag in array)
         const targetTag = target.toNoteTag();
-        const fetchedNotes = await client.fetchNotes(targetTag);
+        const fetchedNotes = await client.fetchNotes([targetTag]);
         
         return { 
           success: true, 

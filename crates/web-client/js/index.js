@@ -71,14 +71,14 @@ export class TransportLayerWebClient {
   /**
    * Fetch notes from the transport layer
    *
-   * @param {NoteTag} tag - The note tag to filter by
+   * @param {Array<NoteTag>} tags - Array of note tags to filter by (can be single tag in array)
    * @returns {Promise<Array<Note>>} Array of note objects
    */
-  async fetchNotes(tag) {
+  async fetchNotes(tags) {
     if (!this.wasmClient) {
       throw new Error("Client not initialized. Call connect() first.");
     }
-    return await this.wasmClient.fetchNotes(tag);
+    return await this.wasmClient.fetchNotes(tags);
   }
 
   /**

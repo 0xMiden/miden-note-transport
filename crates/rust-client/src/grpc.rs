@@ -4,11 +4,7 @@ compile_error!("features `tonic` and `web-tonic` are mutually exclusive");
 #[cfg(all(not(target_arch = "wasm32"), feature = "web-tonic"))]
 compile_error!("The `web-tonic` feature is only supported when targeting wasm32.");
 
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{
     pin::Pin,
     task::{Context, Poll},
@@ -99,8 +95,9 @@ impl GrpcClient {
     ///
     /// Downloads notes for a given tag.
     /// Only notes with cursor greater than the provided cursor are returned.
-    pub async fn fetch_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Vec<NoteInfo>> {
-        let request = FetchNotesRequest { tag: tag.as_u32(), cursor };
+    pub async fn fetch_notes(&mut self, tags: &[NoteTag], cursor: u64) -> Result<Vec<NoteInfo>> {
+        let tag_ints = tags.iter().map(NoteTag::as_u32).collect();
+        let request = FetchNotesRequest { tags: tag_ints, cursor };
 
         let response = self
             .client
@@ -115,16 +112,13 @@ impl GrpcClient {
         let mut notes = Vec::new();
 
         for pg_note in response.notes {
-            let note = pg_note
-                .note
-                .ok_or_else(|| Error::Internal("Fetched note has no data".to_string()))?;
-            let header = NoteHeader::read_from_bytes(&note.header)
+            let header = NoteHeader::read_from_bytes(&pg_note.header)
                 .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
 
             notes.push(NoteInfo {
                 header,
-                details: note.details,
-                cursor: pg_note.cursor,
+                details: pg_note.details,
+                cursor: response.cursor,
             });
         }
 
@@ -174,10 +168,10 @@ impl super::TransportClient for GrpcClient {
 
     async fn fetch_notes(
         &mut self,
-        tag: NoteTag,
+        tags: &[NoteTag],
         cursor: u64,
     ) -> Result<Vec<crate::types::NoteInfo>> {
-        self.fetch_notes(tag, cursor).await
+        self.fetch_notes(tags, cursor).await
     }
 
     async fn stream_notes(&mut self, tag: NoteTag, cursor: u64) -> Result<Box<dyn NoteStream>> {
@@ -207,16 +201,14 @@ impl Stream for NoteStreamAdapter {
                 // Convert StreamNotesUpdate to Vec<NoteInfo>
                 let mut notes = Vec::new();
                 for pg_note in update.notes {
-                    if let Some(note) = pg_note.note {
-                        let header = NoteHeader::read_from_bytes(&note.header)
-                            .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
+                    let header = NoteHeader::read_from_bytes(&pg_note.header)
+                        .map_err(|e| Error::Internal(format!("Invalid note header: {e:?}")))?;
 
-                        notes.push(NoteInfo {
-                            header,
-                            details: note.details,
-                            cursor: pg_note.cursor,
-                        });
-                    }
+                    notes.push(NoteInfo {
+                        header,
+                        details: pg_note.details,
+                        cursor: update.cursor,
+                    });
                 }
                 Poll::Ready(Some(Ok(notes)))
             },

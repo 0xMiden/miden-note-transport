@@ -27,7 +27,7 @@ async fn test_transport_client_note_fetch_tracking()
     // Initially, the note should not be marked as fetched
     assert!(!client1.note_fetched(&note_id).await.unwrap());
 
-    let _notes = client1.fetch_notes(tag).await?;
+    let _notes = client1.fetch_notes(&[tag]).await?;
     assert!(client1.note_fetched(&note_id).await.unwrap());
 
     handle.abort();
@@ -50,7 +50,7 @@ async fn test_transport_client_note_storage() -> std::result::Result<(), Box<dyn
 
     // Fetch
     let sent_tag = adr1.to_note_tag();
-    let fetched_notes = client1.fetch_notes(sent_tag).await.unwrap();
+    let fetched_notes = client1.fetch_notes(&[sent_tag]).await.unwrap();
     assert_eq!(fetched_notes.len(), 1);
 
     // Verify marked as fetched in the DB

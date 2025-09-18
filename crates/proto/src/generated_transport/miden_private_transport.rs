@@ -10,15 +10,6 @@ pub struct TransportNote {
     #[prost(bytes = "vec", tag = "2")]
     pub details: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TransportNotePg {
-    /// Note
-    #[prost(message, optional, tag = "1")]
-    pub note: ::core::option::Option<TransportNote>,
-    /// Transport Layer pagination
-    #[prost(fixed64, tag = "2")]
-    pub cursor: u64,
-}
 /// API request for sending a note
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SendNoteRequest {
@@ -29,10 +20,10 @@ pub struct SendNoteRequest {
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct SendNoteResponse {}
 /// API request for fetching notes
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FetchNotesRequest {
-    #[prost(fixed32, tag = "1")]
-    pub tag: u32,
+    #[prost(fixed32, repeated, tag = "1")]
+    pub tags: ::prost::alloc::vec::Vec<u32>,
     #[prost(fixed64, tag = "2")]
     pub cursor: u64,
 }
@@ -40,7 +31,10 @@ pub struct FetchNotesRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FetchNotesResponse {
     #[prost(message, repeated, tag = "1")]
-    pub notes: ::prost::alloc::vec::Vec<TransportNotePg>,
+    pub notes: ::prost::alloc::vec::Vec<TransportNote>,
+    /// Transport Layer pagination
+    #[prost(fixed64, tag = "2")]
+    pub cursor: u64,
 }
 /// API request for streaming notes
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
@@ -54,7 +48,10 @@ pub struct StreamNotesRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StreamNotesUpdate {
     #[prost(message, repeated, tag = "1")]
-    pub notes: ::prost::alloc::vec::Vec<TransportNotePg>,
+    pub notes: ::prost::alloc::vec::Vec<TransportNote>,
+    /// Transport Layer pagination
+    #[prost(fixed64, tag = "2")]
+    pub cursor: u64,
 }
 /// Server statistics
 #[derive(Clone, PartialEq, ::prost::Message)]

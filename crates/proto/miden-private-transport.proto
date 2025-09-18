@@ -4,7 +4,6 @@ package miden_private_transport;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
-import "types/note.proto";
 
 // A Note exchanged over the Transport Layer.
 // Includes the full header for NoteId, NoteTag access.
@@ -13,13 +12,6 @@ message TransportNote {
     bytes header = 1;
     // NoteDetails, can be encrypted
     bytes details = 2;
-}
-
-message TransportNotePg {
-    // Note
-    TransportNote note = 1;
-    // Transport Layer pagination
-    fixed64 cursor = 2;
 }
 
 // API request for sending a note
@@ -32,13 +24,15 @@ message SendNoteResponse { }
 
 // API request for fetching notes
 message FetchNotesRequest {
-    fixed32 tag = 1;
+    repeated fixed32 tags = 1;
     fixed64 cursor = 2;
 }
 
 // API response for fetching notes
 message FetchNotesResponse {
-    repeated TransportNotePg notes = 1;
+    repeated TransportNote notes = 1;
+    // Transport Layer pagination
+    fixed64 cursor = 2;
 }
 
 // API request for streaming notes
@@ -49,7 +43,9 @@ message StreamNotesRequest {
 
 // API response for streaming notes updates
 message StreamNotesUpdate {
-    repeated TransportNotePg notes = 1;
+    repeated TransportNote notes = 1;
+    // Transport Layer pagination
+    fixed64 cursor = 2;
 }
 
 // Server statistics

@@ -62,18 +62,18 @@ impl TransportLayerWebClient {
         Ok(note_id.into())
     }
 
-    /// Fetch notes from the transport layer
+    /// Fetch notes from the transport layer for one or more tags
     #[wasm_bindgen(js_name = "fetchNotes")]
-    pub async fn fetch_notes(&mut self, tag: &NoteTag) -> Result<Vec<Note>, JsValue> {
+    pub async fn fetch_notes(&mut self, tags: Vec<NoteTag>) -> Result<Vec<Note>, JsValue> {
         let inner = self
             .inner
             .as_mut()
             .ok_or_else(|| JsValue::from_str("Client not initialized. Call connect() first."))?;
 
-        let native_tag: NativeNoteTag = tag.into();
+        let native_tags: Vec<NativeNoteTag> = tags.iter().map(|tag| tag.into()).collect();
 
         let notes = inner
-            .fetch_notes(native_tag)
+            .fetch_notes(&native_tags)
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to fetch notes: {e:?}")))?;
 

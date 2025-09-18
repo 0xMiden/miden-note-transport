@@ -182,7 +182,7 @@ async fn send_note(
 
 async fn fetch_notes(client: &mut TransportLayerClient, tag: u32) -> Result<()> {
     // Fetch notes
-    let decrypted_notes = client.fetch_notes(tag.into()).await?;
+    let decrypted_notes = client.fetch_notes(&[tag.into()]).await?;
 
     info!("Found {} notes", decrypted_notes.len());
 

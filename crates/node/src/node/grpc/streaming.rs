@@ -1,13 +1,16 @@
 use core::task::{Poll, Waker};
 use std::{collections::BTreeMap, sync::Arc};
 
-use miden_private_transport_proto::miden_private_transport::{StreamNotesUpdate, TransportNotePg};
+use miden_private_transport_proto::{TransportNote, miden_private_transport::StreamNotesUpdate};
 use tokio::{
     sync::mpsc,
     time::{Duration, sleep},
 };
 
 use crate::{database::Database, types::NoteTag};
+
+/// Notes (proto) with pagination
+pub type TransportNotesPg = (Vec<miden_private_transport_proto::TransportNote>, u64);
 
 /// Streaming handler
 pub struct NoteStreamer {
@@ -43,14 +46,14 @@ pub(crate) enum StreamerMessage {
 /// Tag data tracking
 pub struct TagData {
     lts: u64,
-    subs: BTreeMap<u64, mpsc::Sender<Vec<TransportNotePg>>>,
+    subs: BTreeMap<u64, mpsc::Sender<TransportNotesPg>>,
 }
 
 /// Subscription
 pub struct Sub {
     id: u64,
     tag: NoteTag,
-    rx: mpsc::Receiver<Vec<TransportNotePg>>,
+    rx: mpsc::Receiver<TransportNotesPg>,
     streamer_tx: mpsc::Sender<StreamerMessage>,
 }
 
@@ -58,7 +61,7 @@ pub struct Sub {
 pub struct Subface {
     id: u64,
     tag: NoteTag,
-    tx: mpsc::Sender<Vec<TransportNotePg>>,
+    tx: mpsc::Sender<TransportNotesPg>,
 }
 
 impl NoteStreamerManager {
@@ -70,32 +73,36 @@ impl NoteStreamerManager {
         }
     }
 
-    pub(super) async fn query_updates(
-        &self,
-    ) -> crate::Result<Vec<(NoteTag, Vec<TransportNotePg>)>> {
+    pub(super) async fn query_updates(&self) -> crate::Result<Vec<(NoteTag, TransportNotesPg)>> {
         // Update period
         sleep(Duration::from_millis(500)).await;
 
         let mut updates = vec![];
         for (tag, tag_data) in &self.tags {
             let snotes = self.database.fetch_notes(*tag, tag_data.lts).await?;
+            let mut cursor = 0;
+            for snote in &snotes {
+                let lcursor = snote
+                    .created_at
+                    .timestamp_micros()
+                    .try_into()
+                    .map_err(|_| tonic::Status::internal("Timestamp too large for cursor"))?;
+                cursor = cursor.max(lcursor);
+            }
 
             // Convert to protobuf format
-            let pnotes: Result<Vec<_>, _> =
-                snotes.into_iter().map(TransportNotePg::try_from).collect();
-            let pnotes = pnotes.map_err(|e| {
-                crate::Error::Internal(format!("Failed converting into proto TransportNotePg: {e}"))
-            })?;
+            let pnotes = snotes.into_iter().map(TransportNote::from).collect::<Vec<_>>();
+            let notespg = (pnotes, cursor);
 
-            if !pnotes.is_empty() {
-                updates.push((*tag, pnotes));
+            if !notespg.0.is_empty() {
+                updates.push((*tag, notespg));
             }
         }
 
         Ok(updates)
     }
 
-    pub(super) fn forward_updates(&mut self, tag_notes: Vec<(NoteTag, Vec<TransportNotePg>)>) {
+    pub(super) fn forward_updates(&mut self, tag_notes: Vec<(NoteTag, TransportNotesPg)>) {
         let mut remove_subs = vec![];
         // Forward updates to subs
         for (tag, notes) in tag_notes {
@@ -118,14 +125,11 @@ impl NoteStreamerManager {
         }
     }
 
-    pub(super) fn update_timestamps(&mut self, tag_notes: &[(NoteTag, Vec<TransportNotePg>)]) {
+    pub(super) fn update_timestamps(&mut self, tag_notes: &[(NoteTag, TransportNotesPg)]) {
         // Update query cursors, to the cursor of the most recent note
         for (tag, notes) in tag_notes {
             if let Some(tag_data) = self.tags.get_mut(tag) {
-                let lts_opt = notes.iter().map(|note| note.cursor).max();
-                if let Some(lts) = lts_opt {
-                    tag_data.lts = lts;
-                }
+                tag_data.lts = notes.1;
             }
         }
     }
@@ -206,7 +210,7 @@ impl Sub {
     pub(crate) fn new(
         id: u64,
         tag: NoteTag,
-        rx: mpsc::Receiver<Vec<TransportNotePg>>,
+        rx: mpsc::Receiver<TransportNotesPg>,
         streamer_tx: mpsc::Sender<StreamerMessage>,
     ) -> Self {
         Self { id, tag, rx, streamer_tx }
@@ -214,7 +218,7 @@ impl Sub {
 }
 
 impl Subface {
-    pub fn new(id: u64, tag: NoteTag, tx: mpsc::Sender<Vec<TransportNotePg>>) -> Self {
+    pub fn new(id: u64, tag: NoteTag, tx: mpsc::Sender<TransportNotesPg>) -> Self {
         Self { id, tag, tx }
     }
 }
@@ -235,8 +239,9 @@ impl tonic::codegen::tokio_stream::Stream for Sub {
     ) -> Poll<Option<Self::Item>> {
         // Send update notes to client
         match self.rx.poll_recv(cx) {
-            Poll::Ready(Some(notes)) => {
-                let updates = StreamNotesUpdate { notes };
+            Poll::Ready(Some(pgnotes)) => {
+                let (notes, cursor) = pgnotes;
+                let updates = StreamNotesUpdate { notes, cursor };
                 return Poll::Ready(Some(Ok(updates)));
             },
             Poll::Ready(None) => return Poll::Ready(None),
