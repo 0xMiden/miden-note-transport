@@ -1,0 +1,25 @@
+[package]
+authors.workspace      = true
+description            = "Miden Private Notes Transport Protocol Buffers Builder"
+edition.workspace      = true
+homepage.workspace     = true
+keywords               = ["build", "miden", "proto"]
+license.workspace      = true
+name                   = "miden-note-transport-proto-build"
+readme                 = "README.md"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lints]
+workspace = true
+
+[dependencies]
+protox      = { workspace = true }
+tonic-build = { workspace = true }
+
+[build-dependencies]
+fs-err = { workspace = true }
+miette = { workspace = true }
+prost  = { workspace = true }
+protox = { workspace = true }

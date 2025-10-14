@@ -3,11 +3,11 @@ mod streaming;
 use std::{collections::BTreeSet, net::SocketAddr, sync::Arc, time::Duration};
 
 use chrono::Utc;
-use miden_objects::utils::Deserializable;
-use miden_private_transport_proto::miden_private_transport::{
+use miden_note_transport_proto::miden_private_transport::{
     FetchNotesRequest, FetchNotesResponse, SendNoteRequest, SendNoteResponse, StatsResponse,
     StreamNotesRequest, TransportNote, miden_private_transport_server::MidenPrivateTransportServer,
 };
+use miden_objects::utils::Deserializable;
 use rand::Rng;
 use tokio::sync::mpsc;
 use tonic::Status;
@@ -108,7 +108,7 @@ impl StreamerCtx {
 }
 
 #[tonic::async_trait]
-impl miden_private_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
+impl miden_note_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
     for GrpcServer
 {
     #[tracing::instrument(skip(self), fields(operation = "grpc.send_note.request"))]

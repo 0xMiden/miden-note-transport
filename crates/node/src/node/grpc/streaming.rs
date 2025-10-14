@@ -1,7 +1,7 @@
 use core::task::{Poll, Waker};
 use std::{collections::BTreeMap, sync::Arc};
 
-use miden_private_transport_proto::{TransportNote, miden_private_transport::StreamNotesUpdate};
+use miden_note_transport_proto::miden_private_transport::{StreamNotesUpdate, TransportNote};
 use tokio::{
     sync::mpsc,
     time::{Duration, sleep},
@@ -10,7 +10,7 @@ use tokio::{
 use crate::{database::Database, types::NoteTag};
 
 /// Notes (proto) with pagination
-pub type TransportNotesPg = (Vec<miden_private_transport_proto::TransportNote>, u64);
+pub type TransportNotesPg = (Vec<TransportNote>, u64);
 
 /// Streaming handler
 pub struct NoteStreamer {

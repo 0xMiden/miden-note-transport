@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use miden_note_transport_proto::miden_private_transport::TransportNote;
 use miden_objects::utils::Serializable;
 pub use miden_objects::{
     Felt,
@@ -20,7 +21,7 @@ pub struct StoredNote {
     pub created_at: DateTime<Utc>,
 }
 
-impl From<StoredNote> for miden_private_transport_proto::TransportNote {
+impl From<StoredNote> for TransportNote {
     fn from(snote: StoredNote) -> Self {
         Self {
             header: snote.header.to_bytes(),

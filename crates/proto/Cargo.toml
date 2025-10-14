@@ -3,9 +3,9 @@ authors.workspace      = true
 description            = "Miden Private Notes Transport Protocol Buffers"
 edition.workspace      = true
 homepage.workspace     = true
-keywords               = ["miden", "proto"]
+keywords               = ["grpc", "miden", "proto"]
 license.workspace      = true
-name                   = "miden-private-transport-proto"
+name                   = "miden-note-transport-proto"
 readme                 = "README.md"
 repository.workspace   = true
 rust-version.workspace = true
@@ -14,15 +14,15 @@ version.workspace      = true
 [lints]
 workspace = true
 
-[features]
-default = ["transport"]
-# If 'transport' disabled, this crate provides only a transport-free client
-transport = ["tonic/transport"]
-
 [dependencies]
-prost       = { default-features = false, version = "0.13" }
+prost       = { workspace = true }
 prost-types = { workspace = true }
-tonic       = { features = ["codegen", "prost"], workspace = true }
+tonic       = { features = ["codegen"], workspace = true }
 
 [build-dependencies]
-tonic-build = { version = "0.13" }
+fs-err      = { workspace = true }
+miette      = { workspace = true }
+prost       = { workspace = true }
+prost-build = { workspace = true }
+protox      = { workspace = true }
+tonic-build = { workspace = true }
