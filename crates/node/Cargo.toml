@@ -22,7 +22,7 @@ testing = []
 
 [dependencies]
 # Proto crate
-miden-private-transport-proto = { workspace = true }
+miden-note-transport-proto = { workspace = true }
 
 # Miden
 miden-objects = { features = ["testing"], workspace = true }

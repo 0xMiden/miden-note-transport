@@ -8,17 +8,15 @@ help:
 
 WARNINGS=RUSTDOCFLAGS="-D warnings"
 
-FEATURES_CLIENT=--features "tonic,sqlite"
-
 # -- linting --------------------------------------------------------------------------------------
 
 .PHONY: clippy
 clippy: ## Runs Clippy with configs
-	CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --workspace --exclude miden-private-transport-client-web -- -D warnings 
+	CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --workspace -- -D warnings 
 
 .PHONY: fix
 fix: ## Runs Fix with configs
-	cargo fix --allow-staged --allow-dirty --all-targets --workspace --exclude miden-private-transport-client-web
+	cargo fix --allow-staged --allow-dirty --all-targets --workspace
 
 .PHONY: format
 format: ## Runs Format using nightly toolchain
@@ -55,8 +53,7 @@ lint: format fix clippy toml workspace-check ## Runs all linting tasks at once (
 
 .PHONY: doc
 doc: ## Generates & checks documentation
-	$(WARNINGS) cd crates/rust-client && cargo doc --keep-going --release --locked $(FEATURES_CLIENT) && \
-		cd ../node  && cargo doc --keep-going --release --locked
+	$(WARNINGS) cargo doc --keep-going --release --locked
 
 .PHONY: book
 book: ## Builds the book & serves documentation site
@@ -66,12 +63,11 @@ book: ## Builds the book & serves documentation site
 
 .PHONY: test
 test:  ## Runs all tests
-	cargo nextest run --workspace --exclude miden-private-transport-client-web
+	cargo nextest run --workspace
 
 .PHONY: doc-test
 doc-test: ## Runs doc tests
-	cd crates/rust-client && cargo test --doc && \
-	cd ../node && cargo test --doc
+	cargo test --doc
 
 # --- checking ------------------------------------------------------------------------------------
 

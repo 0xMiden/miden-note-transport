@@ -1,5 +1,5 @@
 [workspace]
-members  = ["bin/cli", "bin/node", "crates/node", "crates/proto", "crates/rust-client", "crates/web-client"]
+members  = ["bin/node", "crates/node", "crates/proto", "proto"]
 resolver = "2"
 
 [workspace.package]
@@ -15,17 +15,14 @@ version      = "0.1.0"
 
 [workspace.dependencies]
 # Workspace crates (path-based dependencies)
-miden-private-transport-client = { default-features = false, path = "crates/rust-client", version = "0.1" }
-miden-private-transport-node   = { path = "crates/node", version = "0.1" }
-miden-private-transport-proto  = { default-features = false, path = "crates/proto", version = "0.1" }
+miden-note-transport-proto       = { path = "crates/proto", version = "0.1" }
+miden-note-transport-proto-build = { path = "proto", version = "0.1" }
+miden-private-transport-node     = { path = "crates/node", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
 miden-objects = { default-features = false, version = "0.11.1" }
 
 # Other miden dependencies. These should align with those expected by miden-base.
-miden-client  = { default-features = false, version = "0.11.1" }
-miden-lib     = { default-features = false, version = "0.11.1" }
-miden-testing = { default-features = false, version = "0.11.1" }
 
 # External dependencies
 anyhow = { default-features = false, version = "1.0" }
@@ -35,8 +32,9 @@ chrono = { features = ["serde"], version = "0.4" }
 clap = { features = ["derive"], version = "4.5" }
 deadpool = { default-features = false, features = ["managed", "rt_tokio_1"], version = "0.12" }
 deadpool-sync = { version = "0.1" }
+fs-err = { version = "3" }
 futures = { version = "0.3" }
-hex = { version = "0.4" }
+miette = { version = "7.6" }
 opentelemetry = { version = "0.30" }
 opentelemetry-otlp = { default-features = false, features = [
   "grpc-tonic",
@@ -45,14 +43,18 @@ opentelemetry-otlp = { default-features = false, features = [
   "trace",
 ], version = "0.30" }
 opentelemetry_sdk = { features = ["metrics", "rt-tokio", "testing"], version = "0.30" }
+prost = { version = "0.13" }
+prost-build = { version = "0.13" }
 prost-types = { default-features = false, version = "0.13" }
+protox = { version = "0.8" }
 rand = { version = "0.9" }
 serde = { features = ["derive"], version = "1.0" }
 serde_json = { version = "1.0" }
 serial_test = { version = "3.2" }
 thiserror = { default-features = false, version = "2.0" }
 tokio = { features = ["macros", "net", "rt-multi-thread"], version = "1.47" }
-tonic = { default-features = false, version = "0.13" }
+tonic = { default-features = false, features = ["codegen", "prost", "transport"], version = "0.13" }
+tonic-build = { version = "0.13" }
 tonic-health = { version = "0.13" }
 tonic-web = { version = "0.13" }
 tower = { version = "0.5" }
@@ -65,8 +67,7 @@ wasm-bindgen-futures = { version = "0.4" }
 web-sys = { features = ["console"], version = "0.3" }
 
 # Web-specific dependencies
-js-sys             = { version = "0.3" }
-serde-wasm-bindgen = { version = "0.6" }
+js-sys = { version = "0.3" }
 
 # Lints are set to warn for development, which are promoted to errors in CI.
 [workspace.lints.clippy]
