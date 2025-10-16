@@ -17,7 +17,7 @@ workspace = true
 [features]
 
 [dependencies]
-clap                         = { workspace = true }
+clap                      = { workspace = true }
 miden-note-transport-node = { workspace = true }
-tokio                        = { workspace = true }
-tracing                      = { workspace = true }
+tokio                     = { workspace = true }
+tracing                   = { workspace = true }
