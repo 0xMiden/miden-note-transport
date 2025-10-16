@@ -244,7 +244,7 @@ fn request_count_measure<'a>(
 
 impl Default for Metrics {
     fn default() -> Self {
-        let meter = opentelemetry::global::meter("miden-private-transport-node");
+        let meter = opentelemetry::global::meter("miden-note-transport-node");
         Self::new(&meter)
     }
 }

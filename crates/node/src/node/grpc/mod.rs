@@ -6,8 +6,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
-use miden_note_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransportServer;
-use miden_note_transport_proto::miden_private_transport::{
+use miden_note_transport_proto::miden_note_transport::miden_note_transport_server::MidenNoteTransportServer;
+use miden_note_transport_proto::miden_note_transport::{
     FetchNotesRequest,
     FetchNotesResponse,
     SendNoteRequest,
@@ -29,7 +29,7 @@ use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
 use crate::database::Database;
 use crate::metrics::MetricsGrpc;
 
-/// Miden Private Transport gRPC server
+/// Miden Note Transport gRPC server
 pub struct GrpcServer {
     database: Arc<Database>,
     config: GrpcServerConfig,
@@ -78,14 +78,14 @@ impl GrpcServer {
     }
 
     /// Convert into a service
-    pub fn into_service(self) -> MidenPrivateTransportServer<Self> {
-        MidenPrivateTransportServer::new(self)
+    pub fn into_service(self) -> MidenNoteTransportServer<Self> {
+        MidenNoteTransportServer::new(self)
     }
 
     /// gRPC server running-task
     pub async fn serve(self) -> crate::Result<()> {
         let (health_reporter, health_svc) = tonic_health::server::health_reporter();
-        health_reporter.set_serving::<MidenPrivateTransportServer<Self>>().await;
+        health_reporter.set_serving::<MidenNoteTransportServer<Self>>().await;
 
         let addr = format!("{}:{}", self.config.host, self.config.port)
             .parse::<SocketAddr>()
@@ -119,7 +119,7 @@ impl StreamerCtx {
 }
 
 #[tonic::async_trait]
-impl miden_note_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
+impl miden_note_transport_proto::miden_note_transport::miden_note_transport_server::MidenNoteTransport
     for GrpcServer
 {
     #[tracing::instrument(skip(self), fields(operation = "grpc.send_note.request"))]

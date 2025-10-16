@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use miden_note_transport_proto::miden_private_transport::TransportNote;
+use miden_note_transport_proto::miden_note_transport::TransportNote;
 pub use miden_objects::Felt;
 pub use miden_objects::account::AccountId;
 pub use miden_objects::block::BlockNumber;

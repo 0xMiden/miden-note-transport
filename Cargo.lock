@@ -1348,6 +1348,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "miden-note-transport-node"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "deadpool",
+ "deadpool-diesel",
+ "deadpool-sync",
+ "diesel",
+ "diesel_migrations",
+ "miden-note-transport-node",
+ "miden-note-transport-proto",
+ "miden-objects",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "prost-types",
+ "rand",
+ "serial_test",
+ "thiserror",
+ "tokio",
+ "tonic",
+ "tonic-health",
+ "tonic-web",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "miden-note-transport-node-bin"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "miden-note-transport-node",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "miden-note-transport-proto"
 version = "0.1.0"
 dependencies = [
@@ -1391,49 +1434,6 @@ dependencies = [
  "semver 1.0.26",
  "thiserror",
  "winter-rand-utils",
-]
-
-[[package]]
-name = "miden-private-transport-node"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "deadpool",
- "deadpool-diesel",
- "deadpool-sync",
- "diesel",
- "diesel_migrations",
- "miden-note-transport-proto",
- "miden-objects",
- "miden-private-transport-node",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "prost-types",
- "rand",
- "serial_test",
- "thiserror",
- "tokio",
- "tonic",
- "tonic-health",
- "tonic-web",
- "tower",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "miden-private-transport-node-bin"
-version = "0.1.0"
-dependencies = [
- "clap",
- "miden-private-transport-node",
- "tokio",
- "tracing",
 ]
 
 [[package]]

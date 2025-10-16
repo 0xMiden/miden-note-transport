@@ -1,6 +1,6 @@
 [package]
 authors.workspace      = true
-description            = "Miden Private Notes Transport Protocol Buffers"
+description            = "Miden Note Transport Protocol Buffers"
 edition.workspace      = true
 homepage.workspace     = true
 keywords               = ["grpc", "miden", "proto"]

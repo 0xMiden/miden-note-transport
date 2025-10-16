@@ -1,6 +1,6 @@
 services:
-  # Miden Private Transport Node
-  miden-private-transport-node:
+  # Miden Note Transport Node
+  miden-note-transport-node:
     build:
       context: .
       dockerfile: bin/node/docker/Dockerfile
@@ -12,7 +12,7 @@ services:
       - JSON_LOGGING=true
       - OTEL_TRACES_ENDPOINT=http://otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_SERVICE_NAME=miden-private-transport-node
+      - OTEL_SERVICE_NAME=miden-note-transport-node
       - RUST_LOG=INFO
       - DOCKER_ENV=true
       - DATABASE_URL=/app/data/node.db
