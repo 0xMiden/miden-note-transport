@@ -2,12 +2,11 @@ mod error;
 mod maintenance;
 mod sqlite;
 
+pub use self::error::DatabaseError;
+pub use self::maintenance::DatabaseMaintenance;
 use self::sqlite::SqliteDatabase;
-pub use self::{error::DatabaseError, maintenance::DatabaseMaintenance};
-use crate::{
-    metrics::MetricsDatabase,
-    types::{NoteId, NoteTag, StoredNote},
-};
+use crate::metrics::MetricsDatabase;
+use crate::types::{NoteId, NoteTag, StoredNote};
 
 /// Database operations
 #[async_trait::async_trait]
@@ -109,7 +108,8 @@ mod tests {
     use chrono::Utc;
 
     use super::*;
-    use crate::{metrics::Metrics, test_utils::test_note_header};
+    use crate::metrics::Metrics;
+    use crate::test_utils::test_note_header;
 
     const TAG_LOCAL_ANY: u32 = 0xc000_0000;
 

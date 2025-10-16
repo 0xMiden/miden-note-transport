@@ -46,4 +46,5 @@ pub mod test_utils;
 pub mod types;
 
 pub use error::{Error, Result};
-pub use node::{Node, NodeConfig, grpc::GrpcServer};
+pub use node::grpc::GrpcServer;
+pub use node::{Node, NodeConfig};

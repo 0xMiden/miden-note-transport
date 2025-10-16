@@ -1,22 +1,33 @@
 mod streaming;
 
-use std::{collections::BTreeSet, net::SocketAddr, sync::Arc, time::Duration};
+use std::collections::BTreeSet;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use chrono::Utc;
+use miden_note_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransportServer;
 use miden_note_transport_proto::miden_private_transport::{
-    FetchNotesRequest, FetchNotesResponse, SendNoteRequest, SendNoteResponse, StatsResponse,
-    StreamNotesRequest, TransportNote, miden_private_transport_server::MidenPrivateTransportServer,
+    FetchNotesRequest,
+    FetchNotesResponse,
+    SendNoteRequest,
+    SendNoteResponse,
+    StatsResponse,
+    StreamNotesRequest,
+    TransportNote,
 };
 use miden_objects::utils::Deserializable;
 use rand::Rng;
 use tokio::sync::mpsc;
 use tonic::Status;
 use tonic_web::GrpcWebLayer;
-use tower::{limit::GlobalConcurrencyLimitLayer, timeout::TimeoutLayer};
+use tower::limit::GlobalConcurrencyLimitLayer;
+use tower::timeout::TimeoutLayer;
 use tower_http::cors::{Any, CorsLayer};
 
 use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
-use crate::{database::Database, metrics::MetricsGrpc};
+use crate::database::Database;
+use crate::metrics::MetricsGrpc;
 
 /// Miden Private Transport gRPC server
 pub struct GrpcServer {

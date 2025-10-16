@@ -3,10 +3,8 @@ use diesel::prelude::*;
 use miden_objects::utils::{Deserializable, Serializable};
 
 use super::schema::notes;
-use crate::{
-    database::DatabaseError,
-    types::{NoteHeader, StoredNote},
-};
+use crate::database::DatabaseError;
+use crate::types::{NoteHeader, StoredNote};
 
 #[derive(Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = notes)]

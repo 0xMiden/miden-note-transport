@@ -3,17 +3,13 @@ use std::str::FromStr;
 use anyhow::Result;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{
-    metrics::{PeriodicReader, SdkMeterProvider},
-    propagation::TraceContextPropagator,
-    trace::SpanExporter,
-};
+use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_sdk::trace::SpanExporter;
 use tracing::subscriber::Subscriber;
 use tracing_opentelemetry::OpenTelemetryLayer;
-use tracing_subscriber::{
-    Layer, Registry,
-    layer::{Filter, SubscriberExt},
-};
+use tracing_subscriber::layer::{Filter, SubscriberExt};
+use tracing_subscriber::{Layer, Registry};
 
 /// Configures [`setup_tracing`] to enable or disable the open-telemetry exporter.
 #[derive(Clone)]
@@ -219,10 +215,8 @@ where
 /// Panics if `RUST_LOG` fails to parse.
 fn env_or_default_filter<S>() -> Box<dyn Filter<S> + Send + Sync + 'static> {
     use tracing::level_filters::LevelFilter;
-    use tracing_subscriber::{
-        EnvFilter,
-        filter::{FilterExt, Targets},
-    };
+    use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::filter::{FilterExt, Targets};
 
     // `tracing` does not allow differentiating between invalid and missing env var so we manually
     // do this instead. The alternative is to silently ignore parsing errors which I think is worse.

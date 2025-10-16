@@ -1,13 +1,13 @@
 use core::task::{Poll, Waker};
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use miden_note_transport_proto::miden_private_transport::{StreamNotesUpdate, TransportNote};
-use tokio::{
-    sync::mpsc,
-    time::{Duration, sleep},
-};
+use tokio::sync::mpsc;
+use tokio::time::{Duration, sleep};
 
-use crate::{database::Database, types::NoteTag};
+use crate::database::Database;
+use crate::types::NoteTag;
 
 /// Notes (proto) with pagination
 pub type TransportNotesPg = (Vec<TransportNote>, u64);
