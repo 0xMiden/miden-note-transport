@@ -1,10 +1,10 @@
-# Miden Notes Private Transport Node
+# Miden Note Transport Node
 
 Node/server implementation of the Miden Transport Layer for private notes.
 
 ## API
 Messages exchanged with the protocol using gRPC.
-Please see the `miden-private-transport-proto` crate for the employed Protobuf messages and services.
+Please see the `miden-note-transport-proto` crate for the employed Protobuf messages and services.
 
 Clients can interact with the server,
 - `send_note()` receives an incoming note and stores it in the database. The note details can be

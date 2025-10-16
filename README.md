@@ -1,4 +1,4 @@
-# Miden Transport Layer for Private Notes
+# Miden Note Transport Layer
 
 <!--`TODO(template) update badges`-->
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/0xMiden/project-template/blob/main/LICENSE)
@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Miden Transport Layer for Private Notes is a communications system focusing on performance and privacy for the secure exchange of private notes.
+The Miden Note Transport service is a communications system focusing on performance and privacy for the secure exchange of private notes.
 
 The system is based mostly on a request-reply client-server communication scheme, supporting end-to-end encryption.
 The (optionally encrypted) notes are stored on-server allowing for async note exchange between users.
@@ -17,8 +17,6 @@ The (optionally encrypted) notes are stored on-server allowing for async note ex
 This repository contains the following crates:
 
 - `node`: Node/server library;
-- `rust-client`: Rust client library;
-- `web-client`: Client implementation targeting a web-environment. Typescript bindings to the Rust client are provided. WASM-compatible.
 - `proto`: Protobuf definitions and generated code;
 
 ### Binaries

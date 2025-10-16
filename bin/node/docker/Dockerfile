@@ -1,4 +1,4 @@
-# Miden Private Transport Node
+# Miden Note Transport Node
 FROM rust:1.87-slim-bullseye AS builder
 
 RUN apt-get update && \
@@ -24,12 +24,12 @@ RUN apt-get update && \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/cargo/bin/miden-private-transport-node-bin /usr/local/bin/miden-private-transport-node-bin
+COPY --from=builder /usr/local/cargo/bin/miden-note-transport-node-bin /usr/local/bin/miden-note-transport-node-bin
 
 LABEL org.opencontainers.image.authors=devops@miden.team \
     org.opencontainers.image.url=https://0xMiden.github.io/ \
-    org.opencontainers.image.documentation=https://github.com/0xMiden/miden-private-transport \
-    org.opencontainers.image.source=https://github.com/0xMiden/miden-private-transport \
+    org.opencontainers.image.documentation=https://github.com/0xMiden/miden-note-transport \
+    org.opencontainers.image.source=https://github.com/0xMiden/miden-note-transport \
     org.opencontainers.image.vendor=Miden \
     org.opencontainers.image.licenses=MIT
 
@@ -43,4 +43,4 @@ LABEL org.opencontainers.image.created=$CREATED \
 # Expose port
 EXPOSE 57292
 
-CMD ["miden-private-transport-node-bin", "--host", "0.0.0.0"]
+CMD ["miden-note-transport-node-bin", "--host", "0.0.0.0"]

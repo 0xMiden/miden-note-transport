@@ -1,4 +1,4 @@
-# Miden Private Transport Node
+# Miden Note Transport Node
 
 Node binary wrapping the Miden Transport Layer Node library.
 
@@ -9,7 +9,7 @@ To build from source, run
 cargo build --release --locked
 ```
 
-The binary will be available on `./target/release/miden-private-transport-node-bin`.
+The binary will be available on `./target/release/miden-note-transport-node-bin`.
 
 ## Docker setup
 
