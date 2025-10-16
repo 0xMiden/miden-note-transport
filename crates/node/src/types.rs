@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use miden_note_transport_proto::miden_private_transport::TransportNote;
+use miden_note_transport_proto::miden_note_transport::TransportNote;
 use miden_objects::utils::Serializable;
 pub use miden_objects::{
     Felt,

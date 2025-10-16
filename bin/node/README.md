@@ -1,4 +1,4 @@
-# Miden Private Transport Node
+# Miden Note Transport Node
 
 Node binary wrapping the Miden Transport Layer Node library.
 

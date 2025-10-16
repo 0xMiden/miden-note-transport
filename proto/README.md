@@ -1,4 +1,4 @@
-# Miden Private Transport proto
+# Miden Note Transport proto
 
 Protobuf definitions and generated Rust code for the Miden private note transport gRPC API.
 

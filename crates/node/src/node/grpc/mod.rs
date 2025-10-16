@@ -3,7 +3,7 @@ mod streaming;
 use std::{collections::BTreeSet, net::SocketAddr, sync::Arc, time::Duration};
 
 use chrono::Utc;
-use miden_note_transport_proto::miden_private_transport::{
+use miden_note_transport_proto::miden_note_transport::{
     FetchNotesRequest, FetchNotesResponse, SendNoteRequest, SendNoteResponse, StatsResponse,
     StreamNotesRequest, TransportNote, miden_private_transport_server::MidenPrivateTransportServer,
 };
@@ -18,7 +18,7 @@ use tower_http::cors::{Any, CorsLayer};
 use self::streaming::{NoteStreamer, StreamerMessage, Sub, Subface};
 use crate::{database::Database, metrics::MetricsGrpc};
 
-/// Miden Private Transport gRPC server
+/// Miden Note Transport gRPC server
 pub struct GrpcServer {
     database: Arc<Database>,
     config: GrpcServerConfig,
@@ -108,7 +108,7 @@ impl StreamerCtx {
 }
 
 #[tonic::async_trait]
-impl miden_note_transport_proto::miden_private_transport::miden_private_transport_server::MidenPrivateTransport
+impl miden_note_transport_proto::miden_note_transport::miden_private_transport_server::MidenPrivateTransport
     for GrpcServer
 {
     #[tracing::instrument(skip(self), fields(operation = "grpc.send_note.request"))]

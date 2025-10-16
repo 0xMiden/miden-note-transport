@@ -12,7 +12,7 @@ use crate::{
 /// gRPC server
 pub mod grpc;
 
-/// Miden Private Transport Node
+/// Miden Note Transport Node
 pub struct Node {
     /// Serve client requests
     grpc: GrpcServer,

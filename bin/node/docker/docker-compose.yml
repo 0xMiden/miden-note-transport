@@ -1,5 +1,5 @@
 services:
-  # Miden Private Transport Node
+  # Miden Note Transport Node
   miden-note-transport-node:
     build:
       context: .

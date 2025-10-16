@@ -1,7 +1,7 @@
 use core::task::{Poll, Waker};
 use std::{collections::BTreeMap, sync::Arc};
 
-use miden_note_transport_proto::miden_private_transport::{StreamNotesUpdate, TransportNote};
+use miden_note_transport_proto::miden_note_transport::{StreamNotesUpdate, TransportNote};
 use tokio::{
     sync::mpsc,
     time::{Duration, sleep},

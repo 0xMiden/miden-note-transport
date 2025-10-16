@@ -1,4 +1,4 @@
-# Miden Notes Private Transport Node
+# Miden Note Transport Node
 
 Node/server implementation of the Miden Transport Layer for private notes.
 

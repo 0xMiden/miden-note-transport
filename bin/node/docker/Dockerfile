@@ -1,4 +1,4 @@
-# Miden Private Transport Node
+# Miden Note Transport Node
 FROM rust:1.87-slim-bullseye AS builder
 
 RUN apt-get update && \
