@@ -5,7 +5,7 @@ edition.workspace      = true
 homepage.workspace     = true
 keywords               = ["messaging", "miden"]
 license.workspace      = true
-name                   = "miden-private-transport-node"
+name                   = "miden-note-transport-node"
 readme                 = "README.md"
 repository.workspace   = true
 rust-version.workspace = true
@@ -67,5 +67,5 @@ chrono = { workspace = true }
 rand = { workspace = true }
 
 [dev-dependencies]
-miden-private-transport-node = { features = ["testing"], workspace = true }
+miden-note-transport-node = { features = ["testing"], workspace = true }
 serial_test                  = { workspace = true }

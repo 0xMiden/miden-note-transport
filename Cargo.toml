@@ -9,7 +9,7 @@ exclude      = [".github/"]
 homepage     = "https://miden.xyz"
 license      = "MIT"
 readme       = "README.md"
-repository   = "https://github.com/0xMiden/miden-private-transport"
+repository   = "https://github.com/0xMiden/miden-note-transport"
 rust-version = "1.87"
 version      = "0.1.0"
 
@@ -17,7 +17,7 @@ version      = "0.1.0"
 # Workspace crates (path-based dependencies)
 miden-note-transport-proto       = { path = "crates/proto", version = "0.1" }
 miden-note-transport-proto-build = { path = "proto", version = "0.1" }
-miden-private-transport-node     = { path = "crates/node", version = "0.1" }
+miden-note-transport-node        = { path = "crates/node", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
 miden-objects = { default-features = false, version = "0.11.1" }

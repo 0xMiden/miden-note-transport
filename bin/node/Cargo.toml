@@ -5,7 +5,7 @@ edition.workspace      = true
 homepage.workspace     = true
 keywords               = ["messaging", "miden"]
 license.workspace      = true
-name                   = "miden-private-transport-node-bin"
+name                   = "miden-note-transport-node-bin"
 readme.workspace       = true
 repository.workspace   = true
 rust-version.workspace = true
@@ -18,6 +18,6 @@ workspace = true
 
 [dependencies]
 clap                         = { workspace = true }
-miden-private-transport-node = { workspace = true }
+miden-note-transport-node = { workspace = true }
 tokio                        = { workspace = true }
 tracing                      = { workspace = true }

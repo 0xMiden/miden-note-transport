@@ -1,5 +1,5 @@
 use clap::Parser;
-use miden_private_transport_node::{
+use miden_note_transport_node::{
     Node, NodeConfig, Result,
     database::DatabaseConfig,
     logging::{TracingConfig, setup_tracing},
@@ -8,7 +8,7 @@ use miden_private_transport_node::{
 use tracing::info;
 
 #[derive(Parser)]
-#[command(name = "miden-private-transport-node")]
+#[command(name = "miden-note-transport-node")]
 #[command(about = "Miden Transport Node - Canonical transport layer for private notes")]
 struct Args {
     /// Host to bind to

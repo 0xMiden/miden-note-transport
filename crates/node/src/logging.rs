@@ -97,7 +97,7 @@ pub fn setup_tracing(cfg: TracingConfig) -> Result<()> {
 
             match exporter_builder.build() {
                 Ok(exporter) => {
-                    Some(open_telemetry_layer(exporter, "miden-private-transport-node".to_string()))
+                    Some(open_telemetry_layer(exporter, "miden-note-transport-node".to_string()))
                 },
                 Err(_) => None,
             }
