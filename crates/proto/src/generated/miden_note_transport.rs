@@ -74,7 +74,7 @@ pub struct TagStats {
     pub last_activity: ::core::option::Option<::prost_types::Timestamp>,
 }
 /// Generated client implementations.
-pub mod miden_private_transport_client {
+pub mod miden_note_transport_client {
     #![allow(
         unused_variables,
         dead_code,
@@ -86,10 +86,10 @@ pub mod miden_private_transport_client {
     use tonic::codegen::http::Uri;
     /// gRPC service definition
     #[derive(Debug, Clone)]
-    pub struct MidenPrivateTransportClient<T> {
+    pub struct MidenNoteTransportClient<T> {
         inner: tonic::client::Grpc<T>,
     }
-    impl MidenPrivateTransportClient<tonic::transport::Channel> {
+    impl MidenNoteTransportClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
@@ -100,7 +100,7 @@ pub mod miden_private_transport_client {
             Ok(Self::new(conn))
         }
     }
-    impl<T> MidenPrivateTransportClient<T>
+    impl<T> MidenNoteTransportClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::Body>,
         T::Error: Into<StdError>,
@@ -118,7 +118,7 @@ pub mod miden_private_transport_client {
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
-        ) -> MidenPrivateTransportClient<InterceptedService<T, F>>
+        ) -> MidenNoteTransportClient<InterceptedService<T, F>>
         where
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
@@ -132,7 +132,7 @@ pub mod miden_private_transport_client {
                 http::Request<tonic::body::Body>,
             >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
         {
-            MidenPrivateTransportClient::new(InterceptedService::new(inner, interceptor))
+            MidenNoteTransportClient::new(InterceptedService::new(inner, interceptor))
         }
         /// Compress requests with the given encoding.
         ///
@@ -183,13 +183,13 @@ pub mod miden_private_transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/miden_private_transport.MidenPrivateTransport/SendNote",
+                "/miden_note_transport.MidenNoteTransport/SendNote",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "miden_private_transport.MidenPrivateTransport",
+                        "miden_note_transport.MidenNoteTransport",
                         "SendNote",
                     ),
                 );
@@ -213,13 +213,13 @@ pub mod miden_private_transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/miden_private_transport.MidenPrivateTransport/FetchNotes",
+                "/miden_note_transport.MidenNoteTransport/FetchNotes",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "miden_private_transport.MidenPrivateTransport",
+                        "miden_note_transport.MidenNoteTransport",
                         "FetchNotes",
                     ),
                 );
@@ -243,13 +243,13 @@ pub mod miden_private_transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/miden_private_transport.MidenPrivateTransport/StreamNotes",
+                "/miden_note_transport.MidenNoteTransport/StreamNotes",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "miden_private_transport.MidenPrivateTransport",
+                        "miden_note_transport.MidenNoteTransport",
                         "StreamNotes",
                     ),
                 );
@@ -270,22 +270,19 @@ pub mod miden_private_transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/miden_private_transport.MidenPrivateTransport/Stats",
+                "/miden_note_transport.MidenNoteTransport/Stats",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(
-                        "miden_private_transport.MidenPrivateTransport",
-                        "Stats",
-                    ),
+                    GrpcMethod::new("miden_note_transport.MidenNoteTransport", "Stats"),
                 );
             self.inner.unary(req, path, codec).await
         }
     }
 }
 /// Generated server implementations.
-pub mod miden_private_transport_server {
+pub mod miden_note_transport_server {
     #![allow(
         unused_variables,
         dead_code,
@@ -294,9 +291,9 @@ pub mod miden_private_transport_server {
         clippy::let_unit_value,
     )]
     use tonic::codegen::*;
-    /// Generated trait containing gRPC methods that should be implemented for use with MidenPrivateTransportServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with MidenNoteTransportServer.
     #[async_trait]
-    pub trait MidenPrivateTransport: std::marker::Send + std::marker::Sync + 'static {
+    pub trait MidenNoteTransport: std::marker::Send + std::marker::Sync + 'static {
         /// Send a note to the server
         async fn send_note(
             &self,
@@ -335,14 +332,14 @@ pub mod miden_private_transport_server {
     }
     /// gRPC service definition
     #[derive(Debug)]
-    pub struct MidenPrivateTransportServer<T> {
+    pub struct MidenNoteTransportServer<T> {
         inner: Arc<T>,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
         max_decoding_message_size: Option<usize>,
         max_encoding_message_size: Option<usize>,
     }
-    impl<T> MidenPrivateTransportServer<T> {
+    impl<T> MidenNoteTransportServer<T> {
         pub fn new(inner: T) -> Self {
             Self::from_arc(Arc::new(inner))
         }
@@ -393,10 +390,9 @@ pub mod miden_private_transport_server {
             self
         }
     }
-    impl<T, B> tonic::codegen::Service<http::Request<B>>
-    for MidenPrivateTransportServer<T>
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for MidenNoteTransportServer<T>
     where
-        T: MidenPrivateTransport,
+        T: MidenNoteTransport,
         B: Body + std::marker::Send + 'static,
         B::Error: Into<StdError> + std::marker::Send + 'static,
     {
@@ -411,11 +407,11 @@ pub mod miden_private_transport_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/miden_private_transport.MidenPrivateTransport/SendNote" => {
+                "/miden_note_transport.MidenNoteTransport/SendNote" => {
                     #[allow(non_camel_case_types)]
-                    struct SendNoteSvc<T: MidenPrivateTransport>(pub Arc<T>);
+                    struct SendNoteSvc<T: MidenNoteTransport>(pub Arc<T>);
                     impl<
-                        T: MidenPrivateTransport,
+                        T: MidenNoteTransport,
                     > tonic::server::UnaryService<super::SendNoteRequest>
                     for SendNoteSvc<T> {
                         type Response = super::SendNoteResponse;
@@ -429,8 +425,7 @@ pub mod miden_private_transport_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MidenPrivateTransport>::send_note(&inner, request)
-                                    .await
+                                <T as MidenNoteTransport>::send_note(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -457,11 +452,11 @@ pub mod miden_private_transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/miden_private_transport.MidenPrivateTransport/FetchNotes" => {
+                "/miden_note_transport.MidenNoteTransport/FetchNotes" => {
                     #[allow(non_camel_case_types)]
-                    struct FetchNotesSvc<T: MidenPrivateTransport>(pub Arc<T>);
+                    struct FetchNotesSvc<T: MidenNoteTransport>(pub Arc<T>);
                     impl<
-                        T: MidenPrivateTransport,
+                        T: MidenNoteTransport,
                     > tonic::server::UnaryService<super::FetchNotesRequest>
                     for FetchNotesSvc<T> {
                         type Response = super::FetchNotesResponse;
@@ -475,7 +470,7 @@ pub mod miden_private_transport_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MidenPrivateTransport>::fetch_notes(&inner, request)
+                                <T as MidenNoteTransport>::fetch_notes(&inner, request)
                                     .await
                             };
                             Box::pin(fut)
@@ -503,11 +498,11 @@ pub mod miden_private_transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/miden_private_transport.MidenPrivateTransport/StreamNotes" => {
+                "/miden_note_transport.MidenNoteTransport/StreamNotes" => {
                     #[allow(non_camel_case_types)]
-                    struct StreamNotesSvc<T: MidenPrivateTransport>(pub Arc<T>);
+                    struct StreamNotesSvc<T: MidenNoteTransport>(pub Arc<T>);
                     impl<
-                        T: MidenPrivateTransport,
+                        T: MidenNoteTransport,
                     > tonic::server::ServerStreamingService<super::StreamNotesRequest>
                     for StreamNotesSvc<T> {
                         type Response = super::StreamNotesUpdate;
@@ -522,7 +517,7 @@ pub mod miden_private_transport_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MidenPrivateTransport>::stream_notes(&inner, request)
+                                <T as MidenNoteTransport>::stream_notes(&inner, request)
                                     .await
                             };
                             Box::pin(fut)
@@ -550,10 +545,10 @@ pub mod miden_private_transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/miden_private_transport.MidenPrivateTransport/Stats" => {
+                "/miden_note_transport.MidenNoteTransport/Stats" => {
                     #[allow(non_camel_case_types)]
-                    struct StatsSvc<T: MidenPrivateTransport>(pub Arc<T>);
-                    impl<T: MidenPrivateTransport> tonic::server::UnaryService<()>
+                    struct StatsSvc<T: MidenNoteTransport>(pub Arc<T>);
+                    impl<T: MidenNoteTransport> tonic::server::UnaryService<()>
                     for StatsSvc<T> {
                         type Response = super::StatsResponse;
                         type Future = BoxFuture<
@@ -563,7 +558,7 @@ pub mod miden_private_transport_server {
                         fn call(&mut self, request: tonic::Request<()>) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MidenPrivateTransport>::stats(&inner, request).await
+                                <T as MidenNoteTransport>::stats(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -612,7 +607,7 @@ pub mod miden_private_transport_server {
             }
         }
     }
-    impl<T> Clone for MidenPrivateTransportServer<T> {
+    impl<T> Clone for MidenNoteTransportServer<T> {
         fn clone(&self) -> Self {
             let inner = self.inner.clone();
             Self {
@@ -625,8 +620,8 @@ pub mod miden_private_transport_server {
         }
     }
     /// Generated gRPC service name
-    pub const SERVICE_NAME: &str = "miden_private_transport.MidenPrivateTransport";
-    impl<T> tonic::server::NamedService for MidenPrivateTransportServer<T> {
+    pub const SERVICE_NAME: &str = "miden_note_transport.MidenNoteTransport";
+    impl<T> tonic::server::NamedService for MidenNoteTransportServer<T> {
         const NAME: &'static str = SERVICE_NAME;
     }
 }

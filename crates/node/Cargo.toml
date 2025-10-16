@@ -1,6 +1,6 @@
 [package]
 authors.workspace      = true
-description            = "Miden Private Notes Transport Node"
+description            = "Miden Note Transport Node"
 edition.workspace      = true
 homepage.workspace     = true
 keywords               = ["messaging", "miden"]
