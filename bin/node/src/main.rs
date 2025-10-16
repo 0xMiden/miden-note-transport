@@ -1,10 +1,8 @@
 use clap::Parser;
-use miden_note_transport_node::{
-    Node, NodeConfig, Result,
-    database::DatabaseConfig,
-    logging::{TracingConfig, setup_tracing},
-    node::grpc::GrpcServerConfig,
-};
+use miden_note_transport_node::database::DatabaseConfig;
+use miden_note_transport_node::logging::{TracingConfig, setup_tracing};
+use miden_note_transport_node::node::grpc::GrpcServerConfig;
+use miden_note_transport_node::{Node, NodeConfig, Result};
 use tracing::info;
 
 #[derive(Parser)]

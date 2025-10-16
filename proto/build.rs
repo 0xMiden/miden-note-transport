@@ -1,4 +1,5 @@
-use std::{env, path::PathBuf};
+use std::env;
+use std::path::PathBuf;
 
 use fs_err as fs;
 use miette::{Context, IntoDiagnostic};

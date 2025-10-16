@@ -3,11 +3,9 @@ use std::sync::Arc;
 use tracing::{error, info};
 
 use self::grpc::{GrpcServer, GrpcServerConfig};
-use crate::{
-    Result,
-    database::{Database, DatabaseConfig, DatabaseMaintenance},
-    metrics::Metrics,
-};
+use crate::Result;
+use crate::database::{Database, DatabaseConfig, DatabaseMaintenance};
+use crate::metrics::Metrics;
 
 /// gRPC server
 pub mod grpc;

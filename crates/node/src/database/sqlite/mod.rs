@@ -1,11 +1,9 @@
 use chrono::Utc;
 use diesel::prelude::*;
 
-use crate::{
-    database::{DatabaseBackend, DatabaseConfig, DatabaseError},
-    metrics::MetricsDatabase,
-    types::{NoteId, NoteTag, StoredNote},
-};
+use crate::database::{DatabaseBackend, DatabaseConfig, DatabaseError};
+use crate::metrics::MetricsDatabase;
+use crate::types::{NoteId, NoteTag, StoredNote};
 
 mod connection_manager;
 mod migrations;

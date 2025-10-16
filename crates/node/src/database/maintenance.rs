@@ -4,7 +4,8 @@ use tokio::time::{Duration, sleep};
 use tracing::{error, info};
 
 use super::{Database, DatabaseConfig};
-use crate::{Result, metrics::MetricsDatabase};
+use crate::Result;
+use crate::metrics::MetricsDatabase;
 
 enum State {
     Stopped,
@@ -64,7 +65,9 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::{metrics::Metrics, test_utils::test_note_header, types::StoredNote};
+    use crate::metrics::Metrics;
+    use crate::test_utils::test_note_header;
+    use crate::types::StoredNote;
 
     fn note_at(age: Duration) -> StoredNote {
         StoredNote {

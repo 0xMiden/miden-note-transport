@@ -1,9 +1,7 @@
-use miden_objects::{
-    Felt, Word,
-    account::AccountId,
-    note::{NoteExecutionHint, NoteHeader, NoteId, NoteMetadata, NoteTag, NoteType},
-    testing::account_id::ACCOUNT_ID_MAX_ZEROES,
-};
+use miden_objects::account::AccountId;
+use miden_objects::note::{NoteExecutionHint, NoteHeader, NoteId, NoteMetadata, NoteTag, NoteType};
+use miden_objects::testing::account_id::ACCOUNT_ID_MAX_ZEROES;
+use miden_objects::{Felt, Word};
 use rand::Rng;
 
 /// Generate a random [`NoteId`]

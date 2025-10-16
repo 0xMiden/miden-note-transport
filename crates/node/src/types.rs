@@ -1,12 +1,18 @@
 use chrono::{DateTime, Utc};
 use miden_note_transport_proto::miden_note_transport::TransportNote;
-use miden_objects::utils::Serializable;
-pub use miden_objects::{
-    Felt,
-    account::AccountId,
-    block::BlockNumber,
-    note::{Note, NoteDetails, NoteHeader, NoteId, NoteInclusionProof, NoteTag, NoteType},
+pub use miden_objects::Felt;
+pub use miden_objects::account::AccountId;
+pub use miden_objects::block::BlockNumber;
+pub use miden_objects::note::{
+    Note,
+    NoteDetails,
+    NoteHeader,
+    NoteId,
+    NoteInclusionProof,
+    NoteTag,
+    NoteType,
 };
+use miden_objects::utils::Serializable;
 
 /// A note stored in the database
 #[derive(Debug, Clone)]

@@ -1,7 +1,5 @@
-use opentelemetry::{
-    KeyValue,
-    metrics::{Counter, Histogram, Meter},
-};
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::{Counter, Histogram, Meter};
 
 /// Transport metrics using OpenTelemetry metrics
 ///
