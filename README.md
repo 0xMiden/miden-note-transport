@@ -17,8 +17,6 @@ The (optionally encrypted) notes are stored on-server allowing for async note ex
 This repository contains the following crates:
 
 - `node`: Node/server library;
-- `rust-client`: Rust client library;
-- `web-client`: Client implementation targeting a web-environment. Typescript bindings to the Rust client are provided. WASM-compatible.
 - `proto`: Protobuf definitions and generated code;
 
 ### Binaries
