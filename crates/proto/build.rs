@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
-use prost::Message;
+use protox::prost::Message;
 
 const MNT_PROTO: &str = "miden_note_transport.proto";
 const MNT_DESCRIPTOR: &str = "miden_note_transport_file_descriptor.bin";
@@ -33,11 +33,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate the Rust bindings
     let descriptor = mnt_file_descriptor;
 
-    tonic_build::configure()
+    tonic_prost_build::configure()
         .out_dir("src/generated")
         .build_server(true)
         .build_client(true)
-        .compile_fds_with_config(prost_build::Config::new(), descriptor)
+        .compile_fds_with_config(descriptor, tonic_prost_build::Config::new())
         .into_diagnostic()
         .wrap_err("generating protobuf bindings")?;
 

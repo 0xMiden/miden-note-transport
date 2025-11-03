@@ -1,5 +1,5 @@
 use protox::prost::Message;
-use tonic_build::FileDescriptorSet;
+use tonic_prost_build::FileDescriptorSet;
 
 /// Returns the Protobuf file descriptor for the Miden Note Transport API.
 pub fn mnt_api_descriptor() -> FileDescriptorSet {
