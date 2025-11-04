@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
-use prost::Message;
+use protox::prost::Message;
 
 const MNT_PROTO: &str = "miden_note_transport.proto";
 const MNT_DESCRIPTOR: &str = "miden_note_transport_file_descriptor.bin";

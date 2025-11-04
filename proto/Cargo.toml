@@ -15,11 +15,10 @@ version.workspace      = true
 workspace = true
 
 [dependencies]
-protox      = { workspace = true }
-tonic-build = { workspace = true }
+protox            = { workspace = true }
+tonic-prost-build = { workspace = true }
 
 [build-dependencies]
 fs-err = { workspace = true }
 miette = { workspace = true }
-prost  = { workspace = true }
 protox = { workspace = true }
