@@ -20,7 +20,7 @@ miden-note-transport-proto       = { path = "crates/proto", version = "0.1" }
 miden-note-transport-proto-build = { path = "proto", version = "0.1" }
 
 # miden-base aka protocol dependencies (git = "https://github.com/0xMiden/miden-base"). These should be updated in sync.
-miden-objects = { default-features = false, version = "0.11.1" }
+miden-objects = { default-features = false, version = "0.12" }
 
 # Other miden dependencies. These should align with those expected by miden-base.
 
