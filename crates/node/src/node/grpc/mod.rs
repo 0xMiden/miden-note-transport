@@ -196,7 +196,7 @@ impl miden_note_transport_proto::miden_note_transport::miden_note_transport_serv
             proto_notes_size,
         );
 
-        Ok(tonic::Response::new(FetchNotesResponse { notes: proto_notes, cursor }))
+        Ok(tonic::Response::new(FetchNotesResponse { notes: proto_notes, cursor: rcursor }))
     }
 
     type StreamNotesStream = Sub;
