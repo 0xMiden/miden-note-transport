@@ -39,8 +39,8 @@ pub mod metrics;
 pub mod node;
 /// Testing functions
 ///
-/// Gated through the `testing` feature.
-#[cfg(feature = "testing")]
+/// Available during tests or when the `testing` feature is enabled.
+#[cfg(any(test, feature = "testing"))]
 pub mod test_utils;
 /// Types used
 pub mod types;

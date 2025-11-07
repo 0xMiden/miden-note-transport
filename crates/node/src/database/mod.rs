@@ -103,7 +103,7 @@ impl Database {
     }
 }
 
-#[cfg(all(test, feature = "testing"))]
+#[cfg(test)]
 mod tests {
     use chrono::Utc;
 
