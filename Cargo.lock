@@ -1621,7 +1621,6 @@ dependencies = [
  "deadpool-sync",
  "diesel",
  "diesel_migrations",
- "miden-note-transport-node",
  "miden-note-transport-proto",
  "miden-objects",
  "opentelemetry",
