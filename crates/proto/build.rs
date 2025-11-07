@@ -16,6 +16,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo::rerun-if-changed=../../proto/proto");
     println!("cargo::rerun-if-env-changed=BUILD_PROTO");
 
+    if env::var("BUILD_PROTO").as_deref() != Ok("1") {
+        return Ok(());
+    }
+
     let out =
         env::var("OUT_DIR").expect("env::OUT_DIR is always set in build.rs when used with cargo");
 
