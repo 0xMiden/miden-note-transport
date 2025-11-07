@@ -59,7 +59,7 @@ impl DatabaseMaintenance {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "testing"))]
 mod tests {
     use chrono::Utc;
     use serial_test::serial;
