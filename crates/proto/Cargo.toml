@@ -6,7 +6,6 @@ homepage.workspace     = true
 keywords               = ["grpc", "miden", "proto"]
 license.workspace      = true
 name                   = "miden-note-transport-proto"
-readme                 = "README.md"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
