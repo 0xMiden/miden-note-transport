@@ -7,12 +7,13 @@ help:
 # -- variables ------------------------------------------------------------------------------------
 
 WARNINGS=RUSTDOCFLAGS="-D warnings"
+BUILD_PROTO=BUILD_PROTO=1
 
 # -- linting --------------------------------------------------------------------------------------
 
 .PHONY: clippy
 clippy: ## Runs Clippy with configs
-	CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --workspace -- -D warnings 
+	$(BUILD_PROTO) CLIPPY_CONF_DIR=configs cargo clippy --locked --all-targets --workspace -- -D warnings
 
 .PHONY: fix
 fix: ## Runs Fix with configs
@@ -53,7 +54,7 @@ lint: format fix clippy toml workspace-check ## Runs all linting tasks at once (
 
 .PHONY: doc
 doc: ## Generates & checks documentation
-	$(WARNINGS) cargo doc --keep-going --release --locked
+	$(BUILD_PROTO) $(WARNINGS) cargo doc --keep-going --release --locked
 
 .PHONY: book
 book: ## Builds the book & serves documentation site
@@ -63,23 +64,23 @@ book: ## Builds the book & serves documentation site
 
 .PHONY: test
 test:  ## Runs all tests
-	cargo nextest run --workspace
+	$(BUILD_PROTO) cargo nextest run --workspace
 
 .PHONY: doc-test
 doc-test: ## Runs doc tests
-	cargo test --doc
+	$(BUILD_PROTO) cargo test --doc
 
 # --- checking ------------------------------------------------------------------------------------
 
 .PHONY: check
 check: ## Check all targets and features for errors without code generation
-	cargo check --all-targets --locked --workspace
+	$(BUILD_PROTO) cargo check --all-targets --locked --workspace
 
 # --- building ------------------------------------------------------------------------------------
 
 .PHONY: build
 build: ## Builds all crates and re-builds protobuf bindings for proto crates
-	cargo build --locked --workspace
+	$(BUILD_PROTO) cargo build --locked --workspace
 
 
 # --- node-docker ---------------------------------------------------------------------------------
