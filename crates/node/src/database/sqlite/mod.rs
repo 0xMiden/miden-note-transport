@@ -98,24 +98,36 @@ impl DatabaseBackend for SqliteDatabase {
     #[tracing::instrument(skip(self), fields(operation = "db.fetch_notes"))]
     async fn fetch_notes(
         &self,
-        tag: NoteTag,
+        tags: &[NoteTag],
         cursor: u64,
+        limit: Option<u32>,
     ) -> Result<Vec<StoredNote>, DatabaseError> {
         let timer = self.metrics.db_fetch_notes();
+
+        if tags.is_empty() {
+            return Ok(Vec::new());
+        }
 
         let cursor_i64: i64 = cursor.try_into().map_err(|_| {
             DatabaseError::QueryExecution("Cursor too large for SQLite".to_string())
         })?;
 
-        let tag_value = i64::from(tag.as_u32());
+        let tag_values: Vec<i64> = tags.iter().map(|tag| i64::from(tag.as_u32())).collect();
         let notes: Vec<Note> = self
             .transact("fetch notes", move |conn| {
                 use schema::notes::dsl::{created_at, notes, tag};
-                let fetched_notes = notes
-                    .filter(tag.eq(tag_value))
+                let mut query = notes
+                    .filter(tag.eq_any(tag_values))
                     .filter(created_at.gt(cursor_i64))
                     .order(created_at.asc())
-                    .load::<Note>(conn)?;
+                    .into_boxed();
+
+                if let Some(limit_val) = limit {
+                    let limit_i64 = i64::from(limit_val);
+                    query = query.limit(limit_i64);
+                }
+
+                let fetched_notes = query.load::<Note>(conn)?;
                 Ok(fetched_notes)
             })
             .await?;
