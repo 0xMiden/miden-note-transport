@@ -168,7 +168,7 @@ impl miden_note_transport_proto::miden_note_transport::miden_note_transport_serv
         let tags = request_data.tags.into_iter().collect::<BTreeSet<_>>();
         let cursor = request_data.cursor;
 
-        let mut rcursor = 0;
+        let mut rcursor = cursor;
         let mut proto_notes = vec![];
         for tag in tags {
             let stored_notes = self
